@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'welcome_screen.dart';
-import '../widgets/home_icon_painter.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -30,8 +30,8 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
+              Color(0xFFF4B5A4),
               Color(0xFFFFCCBC),
-              Color(0xFFFFAB91),
             ],
           ),
         ),
@@ -39,18 +39,20 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Custom house with couch icon
-              CustomPaint(
-                size: Size(200, 180),
-                painter: HomeIconPainter(color: Colors.white),
+              SvgPicture.asset(
+                'assets/logo/logo.svg',
+                width: 200,
+                height: 180,
+                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
               ),
+
               const SizedBox(height: 40),
-              // App name
+
               Text(
                 'DECOR',
                 style: TextStyle(
                   fontSize: 52,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: Colors.white,
                   letterSpacing: 2,
                   height: 1.0,
@@ -60,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 'MATE',
                 style: TextStyle(
                   fontSize: 52,
-                  fontWeight: FontWeight.w300,
+                  fontWeight: FontWeight.w400,
                   color: Colors.white,
                   letterSpacing: 10,
                   height: 1.0,
