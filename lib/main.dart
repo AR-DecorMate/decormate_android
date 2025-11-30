@@ -1,5 +1,5 @@
+import 'package:decormate_android/screens/launch/splash_screen.dart';
 import 'package:flutter/material.dart';
-import 'screens/launch/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
