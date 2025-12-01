@@ -1,3 +1,4 @@
+import 'package:decormate_android/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import '../launch/welcome_screen.dart';
 
@@ -139,12 +140,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Center(
                       child: GestureDetector(
                         onTap: () {
-                          debugPrint("Full Name: ${fullNameController.text}");
-                          debugPrint("Email: ${emailController.text}");
-                          debugPrint("Mobile: ${mobileController.text}");
-                          debugPrint("DOB: ${dobController.text}");
-                          debugPrint("Password: ${passwordController.text}");
-                          debugPrint("Confirm: ${confirmPasswordController.text}");
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HomeScreen()),
+                          );
                         },
                         child: Container(
                           width: 220,

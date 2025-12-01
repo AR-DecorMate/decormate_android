@@ -1,3 +1,4 @@
+import 'package:decormate_android/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import '../launch/welcome_screen.dart';
 
@@ -209,8 +210,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: GestureDetector(
                         onTap: () {
-                          debugPrint("Email: ${emailController.text}");
-                          debugPrint("Password: ${passwordController.text}");
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const HomeScreen()),
+                          );
                         },
                         child: Container(
                           width: 220,
