@@ -15,7 +15,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreenBody(),
-    const Scaffold(body: Center(child: Text('Search Screen'))), // Placeholder for Search
+    const Scaffold(body: Center(child: Text('Search Screen'))),
     const CommunityScreen(),
     const SavedDesignsScreen(),
     const ProfileScreen(),
@@ -43,33 +43,21 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: iconColor,
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed,
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Community',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Saved',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: "Community"),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: "Saved"),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),
         ],
       ),
     );
   }
 }
 
+// ----------------------------------------------------------------------
+// HOME BODY
+// ----------------------------------------------------------------------
 class HomeScreenBody extends StatefulWidget {
   const HomeScreenBody({super.key});
 
@@ -78,185 +66,264 @@ class HomeScreenBody extends StatefulWidget {
 }
 
 class _HomeScreenBodyState extends State<HomeScreenBody> {
-  final PageController _pageController = PageController();
+  late PageController _pageController;
   int _currentPage = 0;
 
-   final List<Map<String, String>> likedDesigns = [
+  final List<Map<String, String>> trending = [
     {
       'title': 'Minimalist Living Room',
       'author': 'By Angela',
-      'imageUrl': 'https://images.unsplash.com/photo-1554995207-c18c203602cb'
+      'image': 'assets/images/home/livingRoom.jpg',
     },
     {
       'title': 'Bohemian Bedroom',
       'author': 'By Mark',
-      'imageUrl': 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af'
+      'image': 'assets/images/home/bedroom.jpg',
     },
     {
       'title': 'Modern Kitchen',
       'author': 'By Sarah',
-      'imageUrl': 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c'
+      'image': 'assets/images/home/kitchen.jpg',
     },
+  ];
+
+  final List<Map<String, dynamic>> categories = [
+    {'name': 'Sofa', 'icon': Icons.weekend},
+    {'name': 'Bed', 'icon': Icons.bed},
+    {'name': 'Table', 'icon': Icons.table_bar},
+    {'name': 'Chair', 'icon': Icons.chair_alt},
+    {'name': 'Lamps', 'icon': Icons.light},
+    {'name': 'Frames', 'icon': Icons.filter_frames},
+    {'name': 'Fan', 'icon': Icons.toys},
+    {'name': 'Lights', 'icon': Icons.lightbulb},
+    {'name': 'Curtains', 'icon': Icons.storefront},
+    {'name': 'Washbasin', 'icon': Icons.bathroom},
+    {'name': 'Tap', 'icon': Icons.water_drop},
+    {'name': 'Windows', 'icon': Icons.window},
+    {'name': 'Decor', 'icon': Icons.brush},
+    {'name': 'Chandelier', 'icon': Icons.wb_incandescent},
   ];
 
   @override
   void initState() {
     super.initState();
-    _pageController.addListener(() {
-      setState(() {
-        _currentPage = _pageController.page!.round();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+    _pageController = PageController(initialPage: 1000);
   }
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryPink = Color(0xFFF4B5A4);
-    const Color darkText = Color(0xFF363130);
-    const Color iconColor = Color(0xFFCC7861);
-    const Color iconCircleColor = Color(0xFFFAF0E6);
+    const Color orange = Color(0xFFCC7861);
+    const Color textDark = Color(0xFF363130);
 
-    return Stack(
-      children: [
-        ClipPath(
-          clipper: OvalTopClipper(),
-          child: Container(
-            height: 200,
-            color: primaryPink.withOpacity(0.2),
-          ),
-        ),
-        SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 60),
-                const Text(
-                  'Discover & Create',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    color: darkText,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 55),
+
+            // 👋 WELCOME TEXT
+            const Center(
+              child: Text(
+                "Welcome, Madison!",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: orange,
                 ),
-                const SizedBox(height: 30),
-                _buildArCard(primaryPink),
-                const SizedBox(height: 30),
-                const Text(
-                  'Categories',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.bold, color: darkText),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 40,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: ['Bedroom', 'Living Room', 'Kitchen', 'Dining', 'Office']
-                        .map((cat) => _buildCategoryChip(cat, iconCircleColor, darkText))
-                        .toList(),
-                  ),
-                ),
-                const SizedBox(height: 30),
-                const Text(
-                  'Most Liked Designs',
-                  style: TextStyle(fontFamily: 'Poppins', fontSize: 20, fontWeight: FontWeight.bold, color: darkText),
-                ),
-                const SizedBox(height: 15),
-                SizedBox(
-                  height: 200,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    itemCount: likedDesigns.length,
-                    itemBuilder: (context, index) {
-                      final design = likedDesigns[index];
-                      return _buildLikedDesignCard(design['title']!, design['author']!, design['imageUrl']!);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(likedDesigns.length, (index) => _buildDot(index, context, iconColor)),
-                ),
-                const SizedBox(height: 20),
-              ],
+              ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
 
-  Container _buildDot(int index, BuildContext context, Color color) {
-    return Container(
-      height: 10,
-      width: _currentPage == index ? 25 : 10,
-      margin: const EdgeInsets.only(right: 5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: _currentPage == index ? color : color.withOpacity(0.5),
+            const SizedBox(height: 30),
+
+            // 🔥 AR VISUALIZER CARD
+            _buildArCard(),
+
+            const SizedBox(height: 30),
+
+            // CATEGORIES TITLE
+            const Text(
+              "Categories",
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: textDark,
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            // CATEGORY SCROLL (14 ITEMS)
+            SizedBox(
+              height: 100,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: categories.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
+                itemBuilder: (_, index) {
+                  return Column(
+                    children: [
+                      Container(
+                        width: 75,
+                        height: 75,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF5EDE7),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Icon(
+                          categories[index]['icon'],
+                          color: orange,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        categories[index]['name'],
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 12,
+                          color: textDark,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 25),
+
+            // TRENDING TITLE
+            const Text(
+              "Trending Designs",
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: textDark,
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            // 🔥 INFINITE CAROUSEL
+            SizedBox(
+              height: 220,
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index % trending.length;
+                  });
+                },
+                itemBuilder: (_, index) {
+                  final design = trending[index % trending.length];
+                  return _buildTrendingCard(
+                      design['title']!, design['author']!, design['image']!);
+                },
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // ORANGE DOTS INDICATOR
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(trending.length,
+                      (index) => _buildDot(index, orange)),
+            ),
+
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildArCard(Color primaryColor) {
+  // -------------------------------------------------------------------
+  // DOT INDICATOR
+  // -------------------------------------------------------------------
+  Widget _buildDot(int index, Color color) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      height: 10,
+      width: _currentPage == index ? 25 : 10,
+      margin: const EdgeInsets.only(right: 6),
+      decoration: BoxDecoration(
+        color: _currentPage == index ? color : color.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(20),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------
+  // AR CARD
+  // -------------------------------------------------------------------
+  Widget _buildArCard() {
     return Container(
       height: 180,
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         image: const DecorationImage(
-          image: NetworkImage('https://images.unsplash.com/photo-1567016376408-0226e4d0c1ea'),
+          image: AssetImage("assets/images/home/arch3.jpg"),
           fit: BoxFit.cover,
         ),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 15, spreadRadius: 1)],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Text(
-            'Visualize Your Dream Space',
-            style: TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, shadows: [Shadow(color: Colors.black45, blurRadius: 10)]),
-          ),
-          const SizedBox(height: 10),
-          ElevatedButton.icon(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: primaryColor, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-            icon: const Icon(Icons.view_in_ar_outlined),
-            label: const Text('Try AR Now'),
-          ),
-        ],
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.black.withOpacity(0.2),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              "Visualize Your Dream Space",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [Shadow(blurRadius: 8, color: Colors.black)],
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {},
+              icon: const Icon(Icons.view_in_ar),
+              label: const Text("Try AR Now"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFFCC7861),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCategoryChip(String label, Color backgroundColor, Color textColor) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: Chip(
-        label: Text(label, style: TextStyle(fontFamily: 'Poppins', color: textColor, fontWeight: FontWeight.w500)),
-        backgroundColor: backgroundColor,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      ),
-    );
-  }
-
-  Widget _buildLikedDesignCard(String title, String author, String imageUrl) {
+  // -------------------------------------------------------------------
+  // TRENDING CARD
+  // -------------------------------------------------------------------
+  Widget _buildTrendingCard(String title, String author, String imagePath) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         image: DecorationImage(
-          image: NetworkImage(imageUrl),
+          image: AssetImage(imagePath),
           fit: BoxFit.cover,
         ),
       ),
@@ -264,24 +331,36 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
+            colors: [
+              Colors.transparent,
+              Colors.black.withOpacity(0.7),
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Text(
                 author,
-                style: const TextStyle(fontFamily: 'Poppins', color: Colors.white70, fontSize: 14),
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
@@ -289,19 +368,4 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
       ),
     );
   }
-}
-
-class OvalTopClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    var path = Path();
-    path.lineTo(0, size.height - 40);
-    path.quadraticBezierTo(size.width / 2, size.height + 20, size.width, size.height - 40);
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
