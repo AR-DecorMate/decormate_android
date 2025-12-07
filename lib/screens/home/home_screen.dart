@@ -15,7 +15,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomeScreenBody(),
-    const Scaffold(body: Center(child: Text('Search Screen'))),
     const CommunityScreen(),
     const SavedDesignsScreen(),
     const ProfileScreen(),
@@ -45,7 +44,6 @@ class _HomeScreenState extends State<HomeScreen> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: "Search"),
           BottomNavigationBarItem(icon: Icon(Icons.people), label: "Community"),
           BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: "Saved"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Profile"),

@@ -7,7 +7,7 @@ class SavedDesignsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(
-        child: Text('Saved Designs Screen'),
+        child: Text('No Designs Saved yet'),
       ),
     );
   }
