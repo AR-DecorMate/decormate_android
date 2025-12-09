@@ -1,8 +1,9 @@
 import 'package:decormate_android/screens/home/home_screen.dart';
-import 'package:decormate_android/screens/auth/signup.dart'; // Make sure this path is correct
+import 'package:decormate_android/screens/auth/signup.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // IMPORTED
 import '../launch/welcome_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -14,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
-  bool _isLoading = false; // To show spinner
+  bool _isLoading = false;
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -35,6 +36,9 @@ class _LoginScreenState extends State<LoginScreen> {
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
+
+      // Note: We don't save name here because it should have been saved during SignUp.
+      // If you want to sync, you could fetch it, but it's not usually necessary.
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -62,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) {
-        setState(() => _isLoading = false); // User canceled
+        setState(() => _isLoading = false);
         return;
       }
 
@@ -72,7 +76,18 @@ class _LoginScreenState extends State<LoginScreen> {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      User? user = userCredential.user;
+
+      // SAVE/UPDATE USER IN FIRESTORE (Important for first-time Google logins)
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'email': user.email,
+          'name': user.displayName ?? "User",
+          'last_login': DateTime.now(),
+          // Merge: true ensures we don't overwrite "Mobile" or "DOB" if they added it later
+        }, SetOptions(merge: true));
+      }
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -254,7 +269,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // LOGIN BUTTON
                     Center(
                       child: GestureDetector(
-                        onTap: _isLoading ? null : _login, // Disable if loading
+                        onTap: _isLoading ? null : _login,
                         child: Container(
                           width: 220,
                           height: 48,
@@ -342,7 +357,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     Center(
                       child: GestureDetector(
                         onTap: () {
-                          // Navigate to SignUp Screen
                           Navigator.push(
                             context,
                             MaterialPageRoute(builder: (context) => const SignUpScreen()),

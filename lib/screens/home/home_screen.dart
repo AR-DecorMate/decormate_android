@@ -2,6 +2,9 @@ import 'package:decormate_android/screens/community/community_screen.dart';
 import 'package:decormate_android/screens/profile/profile_screen.dart';
 import 'package:decormate_android/screens/saved_designs/saved_designs_screen.dart';
 import 'package:flutter/material.dart';
+// --- NEW IMPORTS ---
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -67,6 +70,9 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
   late PageController _pageController;
   int _currentPage = 0;
 
+  // GET CURRENT USER ID
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
+
   final List<Map<String, String>> trending = [
     {
       'title': 'Minimalist Living Room',
@@ -122,17 +128,44 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           children: [
             const SizedBox(height: 55),
 
-            // 👋 WELCOME TEXT
-            const Center(
-              child: Text(
-                "Welcome, Madison!",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: orange,
-                ),
+            // 👋 WELCOME TEXT (DYNAMIC FETCH)
+            Center(
+              child: uid == null
+                  ? const Text("Welcome!",
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: orange))
+                  : StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(uid)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  String name = "Guest";
+
+                  // Check if we have data
+                  if (snapshot.hasData && snapshot.data!.exists) {
+                    var data = snapshot.data!.data() as Map<String, dynamic>;
+                    if (data.containsKey('name')) {
+                      name = data['name'];
+                      // Optional: Split to get just First Name
+                      // name = name.split(" ")[0];
+                    }
+                  }
+
+                  return Text(
+                    "Welcome, $name!",
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: orange,
+                    ),
+                  );
+                },
               ),
             ),
 

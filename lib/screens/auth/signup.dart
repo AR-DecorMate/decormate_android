@@ -2,8 +2,9 @@ import 'package:decormate_android/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../launch/welcome_screen.dart';
-import 'login.dart'; // Ensure correct import
+import 'login.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,7 +16,7 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePass = true;
   bool _obscureConfirm = true;
-  bool _isLoading = false; // Loading state
+  bool _isLoading = false;
 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -26,7 +27,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // --- FIREBASE SIGN UP LOGIC ---
   Future<void> _signUp() async {
-    // Basic Validation
+    // 1. Close Keyboard (Important for navigation stability)
+    FocusScope.of(context).unfocus();
+
     if (emailController.text.isEmpty ||
         passwordController.text.isEmpty ||
         fullNameController.text.isEmpty) {
@@ -46,40 +49,62 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Create User
+      // 2. Create User
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      // 2. Update Display Name
+      // 3. Save User Details to Cloud Firestore
       if (userCredential.user != null) {
+        // Update display name in Auth
         await userCredential.user!.updateDisplayName(fullNameController.text.trim());
+
+        // Save detailed info to Database
+        await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+          'uid': userCredential.user!.uid,
+          'name': fullNameController.text.trim(),
+          'email': emailController.text.trim(),
+          'mobile': mobileController.text.trim(),
+          'dob': dobController.text.trim(),
+          'created_at': DateTime.now(),
+        });
       }
 
-      // 3. Navigate
+      // 4. Stop Loading BEFORE Navigating
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+
+      // 5. Navigate to Home
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
-    } on FirebaseAuthException catch (e) {
-      String message = "Sign up failed.";
-      if (e.code == 'weak-password') message = "The password provided is too weak.";
-      else if (e.code == 'email-already-in-use') message = "The account already exists for that email.";
-
+    } catch (e) {
+      // CATCH ALL ERRORS (Not just Auth Exceptions)
+      // This catches Firestore errors, network errors, etc.
       if (mounted) {
+        setState(() => _isLoading = false);
+
+        String message = "An error occurred: $e";
+
+        // Make the error message user-friendly if it's a known Auth error
+        if (e is FirebaseAuthException) {
+          if (e.code == 'weak-password') message = "The password provided is too weak.";
+          else if (e.code == 'email-already-in-use') message = "The account already exists for that email.";
+          else message = e.message ?? "Authentication failed";
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   // --- GOOGLE SIGN UP LOGIC ---
   Future<void> _signUpWithGoogle() async {
-    // Google Sign-in is the same flow as Login
     setState(() => _isLoading = true);
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
@@ -94,9 +119,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
         idToken: googleAuth.idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      // 1. Sign In
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      User? user = userCredential.user;
 
+      // 2. Save/Update Google User in Firestore
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'uid': user.uid,
+          'name': user.displayName ?? "No Name",
+          'email': user.email,
+          'last_login': DateTime.now(),
+        }, SetOptions(merge: true));
+      }
+
+      // 3. Navigate
       if (mounted) {
+        setState(() => _isLoading = false);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -104,10 +143,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Google Sign-In Failed: $e")));
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -192,6 +230,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 20),
 
+                    // Terms text...
                     Center(
                       child: RichText(
                         textAlign: TextAlign.center,
@@ -217,7 +256,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     // SIGN UP BUTTON
                     Center(
                       child: GestureDetector(
-                        onTap: _isLoading ? null : _signUp, // Disable on load
+                        onTap: _isLoading ? null : _signUp,
                         child: Container(
                           width: 220,
                           height: 48,
@@ -274,7 +313,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Center(
                       child: GestureDetector(
                         onTap: () {
-                          // Navigate back to Login or push replacement
                           if(Navigator.canPop(context)){
                             Navigator.pop(context);
                           } else {
