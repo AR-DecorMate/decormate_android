@@ -1,6 +1,9 @@
 import 'package:decormate_android/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../launch/welcome_screen.dart';
+import 'login.dart'; // Ensure correct import
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -12,6 +15,7 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePass = true;
   bool _obscureConfirm = true;
+  bool _isLoading = false; // Loading state
 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -20,27 +24,109 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
 
+  // --- FIREBASE SIGN UP LOGIC ---
+  Future<void> _signUp() async {
+    // Basic Validation
+    if (emailController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        fullNameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all required fields")),
+      );
+      return;
+    }
+
+    if (passwordController.text != confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Passwords do not match")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // 1. Create User
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      // 2. Update Display Name
+      if (userCredential.user != null) {
+        await userCredential.user!.updateDisplayName(fullNameController.text.trim());
+      }
+
+      // 3. Navigate
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = "Sign up failed.";
+      if (e.code == 'weak-password') message = "The password provided is too weak.";
+      else if (e.code == 'email-already-in-use') message = "The account already exists for that email.";
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // --- GOOGLE SIGN UP LOGIC ---
+  Future<void> _signUpWithGoogle() async {
+    // Google Sign-in is the same flow as Login
+    setState(() => _isLoading = true);
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Google Sign-In Failed: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(top: 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              // -----------------------------------------
-              // BACK ARROW + TITLE (same row)
-              // -----------------------------------------
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
                     IconButton(
-                      padding: EdgeInsets.only(left:0),
+                      padding: const EdgeInsets.only(left: 0),
                       constraints: const BoxConstraints(),
                       onPressed: () {
                         if (Navigator.canPop(context)) {
@@ -55,37 +141,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       icon: const Icon(Icons.arrow_back, color: Color(0xFF4B4544)),
                     ),
                     const SizedBox(width: 50),
-                    Center(child:Text(
-                      "Create Account",
-                      style: TextStyle(
-                        color: const Color(0xFFF4B5A4),
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: "Poppins",
+                    const Center(
+                      child: Text(
+                        "Create Account",
+                        style: TextStyle(
+                          color: Color(0xFFF4B5A4),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: "Poppins",
+                        ),
                       ),
-                    ),)
-
+                    )
                   ],
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              // -----------------------------------------
-              // MAIN CONTENT
-              // -----------------------------------------
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     _buildLabel("Full Name"),
-                    _buildField(fullNameController, "Example@example.com"),
+                    _buildField(fullNameController, "John Doe"),
                     const SizedBox(height: 16),
 
                     _buildLabel("Email"),
-                    _buildField(emailController, "Example@example.com"),
+                    _buildField(emailController, "example@example.com", type: TextInputType.emailAddress),
                     const SizedBox(height: 16),
 
                     _buildLabel("Mobile Number"),
@@ -109,24 +192,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 20),
 
-                    // -----------------------------------------
-                    // TERMS TEXT (bolded as requested)
-                    // -----------------------------------------
                     Center(
                       child: RichText(
                         textAlign: TextAlign.center,
-                        text: TextSpan(
+                        text: const TextSpan(
                           style: TextStyle(
                             fontFamily: "League Spartan",
                             fontSize: 14,
-                            color: const Color(0xFF4B4544),
+                            color: Color(0xFF4B4544),
                           ),
                           children: [
-                            const TextSpan(text: "By continuing, you agree to\n"),
-                            const TextSpan(text: "Terms of Use", style: TextStyle(fontWeight: FontWeight.bold)),
-                            const TextSpan(text: " and "),
-                            const TextSpan(text: "Privacy Policy", style: TextStyle(fontWeight: FontWeight.bold)),
-                            const TextSpan(text: "."),
+                            TextSpan(text: "By continuing, you agree to\n"),
+                            TextSpan(text: "Terms of Use", style: TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: " and "),
+                            TextSpan(text: "Privacy Policy", style: TextStyle(fontWeight: FontWeight.bold)),
+                            TextSpan(text: "."),
                           ],
                         ),
                       ),
@@ -134,17 +214,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 25),
 
-                    // -----------------------------------------
-                    // SIGN UP BUTTON (fixed text color)
-                    // -----------------------------------------
+                    // SIGN UP BUTTON
                     Center(
                       child: GestureDetector(
-                        onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => const HomeScreen()),
-                          );
-                        },
+                        onTap: _isLoading ? null : _signUp, // Disable on load
                         child: Container(
                           width: 220,
                           height: 48,
@@ -153,13 +226,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             borderRadius: BorderRadius.circular(19),
                           ),
                           alignment: Alignment.center,
-                          child: const Text(
+                          child: _isLoading
+                              ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                          )
+                              : const Text(
                             "Sign Up",
                             style: TextStyle(
                               fontFamily: "Poppins",
                               fontSize: 20,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,     // ✅ FIXED TEXT COLOR
+                              color: Colors.white,
                             ),
                           ),
                         ),
@@ -168,14 +247,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     const SizedBox(height: 20),
 
-                    Center(
+                    const Center(
                       child: Text(
                         "or sign up with",
                         style: TextStyle(
                           fontFamily: "League Spartan",
                           fontWeight: FontWeight.w300,
                           fontSize: 13,
-                          color: const Color(0xFF363130),
+                          color: Color(0xFF363130),
                         ),
                       ),
                     ),
@@ -185,31 +264,42 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _socialButton("assets/images/google.png"),
+                        _socialButton("assets/images/google.png", _signUpWithGoogle),
                       ],
                     ),
 
                     const SizedBox(height: 25),
 
+                    // LOGIN LINK
                     Center(
-                      child: RichText(
-                        text: TextSpan(
-                          text: "Already have an account? ",
-                          style: TextStyle(
-                            fontFamily: "League Spartan",
-                            fontWeight: FontWeight.w300,
-                            fontSize: 13,
-                            color: const Color(0xFF363130),
-                          ),
-                          children: [
-                            TextSpan(
-                              text: "Log in",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFFCC7861),
-                              ),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Navigate back to Login or push replacement
+                          if(Navigator.canPop(context)){
+                            Navigator.pop(context);
+                          } else {
+                            Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                          }
+                        },
+                        child: RichText(
+                          text: const TextSpan(
+                            text: "Already have an account? ",
+                            style: TextStyle(
+                              fontFamily: "League Spartan",
+                              fontWeight: FontWeight.w300,
+                              fontSize: 13,
+                              color: Color(0xFF363130),
                             ),
-                          ],
+                            children: [
+                              TextSpan(
+                                text: "Log in",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFCC7861),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -225,18 +315,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  // ----------------------------------------------------------------
-  // REUSABLE COMPONENTS
-  // ----------------------------------------------------------------
-
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: TextStyle(
+      style: const TextStyle(
         fontFamily: "Poppins",
         fontSize: 15,
         fontWeight: FontWeight.w500,
-        color: const Color(0xFF363130),
+        color: Color(0xFF363130),
       ),
     );
   }
@@ -288,7 +374,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             onTap: toggle,
             child: Icon(
               obscure ? Icons.visibility_off : Icons.visibility,
-              color: const Color(0xFFCC7861).withValues(alpha:0.45),
+              color: const Color(0xFFCC7861).withValues(alpha: 0.45),
             ),
           ),
         ],
@@ -296,9 +382,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Widget _socialButton(String asset) {
+  Widget _socialButton(String asset, VoidCallback onTap) {
     return GestureDetector(
-      onTap: () => debugPrint("$asset pressed"),
+      onTap: _isLoading ? null : onTap,
       child: Container(
         width: 50,
         height: 50,

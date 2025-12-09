@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "986823005108",
+    "project_id": "decormate-61eb2",
+    "storage_bucket": "decormate-61eb2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:986823005108:android:e0530fe96e24e4af83d8e1",
+        "android_client_info": {
+          "package_name": "com.example.decormate_android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxgfqtumyISrpWNXjUuKV6iFq77rMGtuo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
