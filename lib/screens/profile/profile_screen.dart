@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../launch/welcome_screen.dart'; // Ensure this import exists for Logout navigation
-
+// Update this path to where your HomeScreen (and PlaceholderScreen) is located:
+import 'package:decormate_android/screens/home/home_screen.dart';
+import '../launch/welcome_screen.dart'; // Keep your existing logout import
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -47,9 +48,18 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // --- CLICKABLE EDIT ICON ---
                     IconButton(
                       icon: const Icon(Icons.edit_outlined, color: iconColor),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const PlaceholderScreen(
+                                title: "Edit Profile Details"),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -75,32 +85,31 @@ class ProfileScreen extends StatelessWidget {
                     .doc(currentUser.uid)
                     .snapshots(),
                 builder: (context, snapshot) {
-                  // 1. Loading State
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
                     return const Padding(
                       padding: EdgeInsets.all(8.0),
                       child: SizedBox(
                           height: 20,
                           width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2)
-                      ),
+                          child:
+                          CircularProgressIndicator(strokeWidth: 2)),
                     );
                   }
 
-                  // 2. Data Logic
                   String name = "No Name";
                   String email = currentUser.email ?? "";
 
                   if (snapshot.hasData && snapshot.data!.exists) {
-                    var data = snapshot.data!.data() as Map<String, dynamic>;
+                    var data =
+                    snapshot.data!.data() as Map<String, dynamic>;
                     name = data['name'] ?? "User";
                   }
 
-                  // 3. Display Data
                   return Column(
                     children: [
                       Text(
-                        name, // <--- REAL NAME
+                        name,
                         style: const TextStyle(
                           fontFamily: "Poppins",
                           fontSize: 20,
@@ -110,7 +119,7 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        email, // <--- REAL EMAIL
+                        email,
                         style: const TextStyle(
                           fontFamily: "League Spartan",
                           fontSize: 14,
@@ -124,7 +133,7 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // --- STATISTICS ROW ---
+              // --- STATISTICS ROW (CLICKABLE) ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Container(
@@ -136,9 +145,12 @@ class ProfileScreen extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildTopOption(Icons.design_services_outlined, 'My Designs'),
-                      _buildTopOption(Icons.favorite_border, 'Liked Posts'),
-                      _buildTopOption(Icons.person_outline, 'Edit Profile'),
+                      _buildTopOption(context, Icons.design_services_outlined,
+                          'My Designs'),
+                      _buildTopOption(
+                          context, Icons.favorite_border, 'Liked Posts'),
+                      _buildTopOption(
+                          context, Icons.person_outline, 'Edit Profile'),
                     ],
                   ),
                 ),
@@ -146,25 +158,28 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 30),
 
-              // --- MENU OPTIONS ---
-              _buildListTile(Icons.privacy_tip_outlined, 'Privacy Policy'),
-              _buildListTile(Icons.notifications_outlined, 'Notifications'),
-              _buildListTile(Icons.settings_outlined, 'Settings'),
-              _buildListTile(Icons.help_outline, 'Help'),
+              // --- MENU OPTIONS (CLICKABLE) ---
+              _buildListTile(
+                  context, Icons.privacy_tip_outlined, 'Privacy Policy'),
+              _buildListTile(
+                  context, Icons.notifications_outlined, 'Notifications'),
+              _buildListTile(context, Icons.settings_outlined, 'Settings'),
+              _buildListTile(context, Icons.help_outline, 'Help'),
 
-              // --- LOGOUT BUTTON ---
+              // --- LOGOUT BUTTON (LOGIC RETAINED) ---
               GestureDetector(
                 onTap: () async {
-                  // Log out logic
                   await FirebaseAuth.instance.signOut();
                   if (context.mounted) {
                     Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const WelcomeScreen()),
                           (Route<dynamic> route) => false,
                     );
                   }
                 },
-                child: _buildListTile(Icons.logout, 'Logout', color: Colors.red),
+                child: _buildListTile(context, Icons.logout, 'Logout',
+                    color: Colors.red, isLogout: true),
               ),
             ],
           ),
@@ -173,30 +188,43 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTopOption(IconData icon, String label) {
+  // UPDATED: Now requires Context and wraps in GestureDetector
+  Widget _buildTopOption(BuildContext context, IconData icon, String label) {
     const Color iconColor = Color(0xFFCC7861);
     const Color darkText = Color(0xFF363130);
-    return Column(
-      children: [
-        Icon(icon, color: iconColor, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: "Poppins",
-            color: darkText,
-            fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PlaceholderScreen(title: label),
           ),
-        ),
-      ],
+        );
+      },
+      child: Column(
+        children: [
+          Icon(icon, color: iconColor, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: "Poppins",
+              color: darkText,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildListTile(IconData icon, String title, {Color color = const Color(0xFF363130)}) {
+  // UPDATED: Now requires Context and wraps in InkWell (unless logout)
+  Widget _buildListTile(BuildContext context, IconData icon, String title,
+      {Color color = const Color(0xFF363130), bool isLogout = false}) {
     const Color iconCircleColor = Color(0xFFFAF0E6);
     const Color iconColor = Color(0xFFCC7861);
 
-    return Padding(
+    Widget content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         children: [
@@ -206,7 +234,8 @@ class ProfileScreen extends StatelessWidget {
               shape: BoxShape.circle,
               color: iconCircleColor,
             ),
-            child: Icon(icon, color: title == 'Logout' ? Colors.red : iconColor),
+            child:
+            Icon(icon, color: title == 'Logout' ? Colors.red : iconColor),
           ),
           const SizedBox(width: 20),
           Expanded(
@@ -220,9 +249,26 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+          if (!isLogout)
+            const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
         ],
       ),
     );
+
+    if (isLogout) {
+      return content;
+    } else {
+      return InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PlaceholderScreen(title: title),
+            ),
+          );
+        },
+        child: content,
+      );
+    }
   }
 }

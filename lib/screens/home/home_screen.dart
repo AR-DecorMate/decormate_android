@@ -2,7 +2,6 @@ import 'package:decormate_android/screens/community/community_screen.dart';
 import 'package:decormate_android/screens/profile/profile_screen.dart';
 import 'package:decormate_android/screens/saved_designs/saved_designs_screen.dart';
 import 'package:flutter/material.dart';
-// --- NEW IMPORTS ---
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -128,7 +127,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
           children: [
             const SizedBox(height: 55),
 
-            // 👋 WELCOME TEXT (DYNAMIC FETCH)
+            // 👋 WELCOME TEXT
             Center(
               child: uid == null
                   ? const Text("Welcome!",
@@ -144,17 +143,13 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   String name = "Guest";
-
-                  // Check if we have data
                   if (snapshot.hasData && snapshot.data!.exists) {
-                    var data = snapshot.data!.data() as Map<String, dynamic>;
+                    var data =
+                    snapshot.data!.data() as Map<String, dynamic>;
                     if (data.containsKey('name')) {
                       name = data['name'];
-                      // Optional: Split to get just First Name
-                      // name = name.split(" ")[0];
                     }
                   }
-
                   return Text(
                     "Welcome, $name!",
                     textAlign: TextAlign.center,
@@ -189,7 +184,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
 
             const SizedBox(height: 15),
 
-            // CATEGORY SCROLL (14 ITEMS)
+            // CATEGORY SCROLL (UPDATED: CLICKABLE)
             SizedBox(
               height: 100,
               child: ListView.separated(
@@ -197,31 +192,43 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 itemCount: categories.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (_, index) {
-                  return Column(
-                    children: [
-                      Container(
-                        width: 75,
-                        height: 75,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF5EDE7),
-                          borderRadius: BorderRadius.circular(18),
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PlaceholderScreen(
+                            title: categories[index]['name'],
+                          ),
                         ),
-                        child: Icon(
-                          categories[index]['icon'],
-                          color: orange,
-                          size: 32,
+                      );
+                    },
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 75,
+                          height: 75,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5EDE7),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Icon(
+                            categories[index]['icon'],
+                            color: orange,
+                            size: 32,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        categories[index]['name'],
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          color: textDark,
+                        const SizedBox(height: 6),
+                        Text(
+                          categories[index]['name'],
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            color: textDark,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   );
                 },
               ),
@@ -265,8 +272,8 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
             // ORANGE DOTS INDICATOR
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(trending.length,
-                      (index) => _buildDot(index, orange)),
+              children: List.generate(
+                  trending.length, (index) => _buildDot(index, orange)),
             ),
 
             const SizedBox(height: 40),
@@ -276,9 +283,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // DOT INDICATOR
-  // -------------------------------------------------------------------
+  // HELPER WIDGETS
   Widget _buildDot(int index, Color color) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
@@ -292,9 +297,6 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // AR CARD
-  // -------------------------------------------------------------------
   Widget _buildArCard() {
     return Container(
       height: 180,
@@ -345,9 +347,6 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
     );
   }
 
-  // -------------------------------------------------------------------
-  // TRENDING CARD
-  // -------------------------------------------------------------------
   Widget _buildTrendingCard(String title, String author, String imagePath) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -362,10 +361,7 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
-            colors: [
-              Colors.transparent,
-              Colors.black.withOpacity(0.7),
-            ],
+            colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -394,6 +390,51 @@ class _HomeScreenBodyState extends State<HomeScreenBody> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ----------------------------------------------------------------------
+// PLACEHOLDER SCREEN (Used by Home & Profile)
+// ----------------------------------------------------------------------
+class PlaceholderScreen extends StatelessWidget {
+  final String title;
+
+  const PlaceholderScreen({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF363130)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF363130),
+            fontFamily: 'Poppins',
+          ),
+        ),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(
+            "$title",
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 18,
+              fontFamily: 'Poppins',
+              color: Colors.grey,
+            ),
           ),
         ),
       ),
