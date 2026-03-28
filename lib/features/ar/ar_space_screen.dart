@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import '../../core/models/catalog_item_model.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/catalog_provider.dart';
 import '../../core/providers/user_provider.dart';
+import '../../core/services/ar_placement_support_service.dart';
 import '../../core/services/ai_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/ai_prompts.dart';
@@ -36,7 +36,9 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
 
   CameraController? _cameraController;
   bool _isCameraReady = false;
+  bool _isInitializingCamera = false;
   String? _cameraError;
+  ArPlacementSupport? _arPlacementSupport;
 
   @override
   void initState() {
@@ -45,9 +47,22 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
       _currentItemId = widget.itemId;
     }
     _initCamera();
+    _loadArPlacementSupport();
+  }
+
+  Future<void> _loadArPlacementSupport() async {
+    final support = await ArPlacementSupportService.getSupport();
+    if (!mounted) return;
+
+    setState(() {
+      _arPlacementSupport = support;
+    });
   }
 
   Future<void> _initCamera() async {
+    if (_isInitializingCamera || _isCameraReady) return;
+
+    _isInitializingCamera = true;
     try {
       final status = await Permission.camera.request();
       if (!status.isGranted) {
@@ -70,10 +85,81 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
         enableAudio: false,
       );
       await _cameraController!.initialize();
-      if (mounted) setState(() => _isCameraReady = true);
+      if (mounted) {
+        setState(() {
+          _isCameraReady = true;
+          _cameraError = null;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _cameraError = 'Camera error: $e');
+    } finally {
+      _isInitializingCamera = false;
     }
+  }
+
+  Future<void> _releaseCamera() async {
+    final controller = _cameraController;
+    _cameraController = null;
+
+    if (mounted) {
+      setState(() {
+        _isCameraReady = false;
+      });
+    } else {
+      _isCameraReady = false;
+    }
+
+    await controller?.dispose();
+  }
+
+  Future<void> _openArPlacement(String modelUrl, String name) async {
+    await _releaseCamera();
+    if (!mounted) return;
+
+    // Give Android a moment to fully release the preview camera before ARCore grabs it.
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (!mounted) return;
+
+    await context.push(
+      Uri(path: '/ar-placement', queryParameters: {
+        'model': modelUrl,
+        'name': name,
+      }).toString(),
+    );
+
+    if (!mounted) return;
+    await _initCamera();
+  }
+
+  Future<void> _handlePlaceInRoom(String modelUrl, String name) async {
+    if (_arPlacementSupport == null) {
+      await _loadArPlacementSupport();
+      if (!mounted) return;
+    }
+
+    final support = _arPlacementSupport;
+    if (support == null || !support.isSupported) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('AR Placement Unavailable'),
+          content: Text(
+            support?.message ??
+                'This device cannot start the AR placement experience.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    await _openArPlacement(modelUrl, name);
   }
 
   @override
@@ -286,6 +372,29 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: _arPlacementSupport == null
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.accent,
+                    ),
+                  )
+                : Icon(
+                    Icons.view_in_ar,
+                    color: _arPlacementSupport!.isSupported
+                        ? AppColors.accent
+                        : Colors.grey,
+                  ),
+            onPressed: _arPlacementSupport == null
+                ? null
+                : () => _handlePlaceInRoom(modelUrl, name),
+            tooltip: _arPlacementSupport?.isSupported ?? false
+                ? 'Place in Room'
+                : 'AR not supported on this device',
+          ),
+          IconButton(
             icon: _isSaving
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
                 : const Icon(Icons.camera_alt, color: AppColors.darkText),
@@ -304,8 +413,7 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
               child: ModelViewer(
                 src: modelUrl,
                 alt: name,
-                ar: true,
-                arModes: const ['scene-viewer', 'webxr', 'quick-look'],
+                ar: false,
                 autoRotate: true,
                 cameraControls: true,
                 disableZoom: false,
@@ -319,6 +427,27 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
             _AiTipBanner(
               tip: _aiTip!,
               onDismiss: () => setState(() => _aiTip = null),
+            )
+          else if (_arPlacementSupport != null && !_arPlacementSupport!.isSupported)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Text(
+                  _arPlacementSupport!.message!,
+                  style: TextStyle(
+                    color: Colors.orange.shade900,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             )
           else
             Padding(

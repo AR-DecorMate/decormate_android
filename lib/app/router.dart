@@ -23,6 +23,7 @@ import '../features/profile/help_screen.dart';
 import '../features/catalog/category_screen.dart';
 import '../features/catalog/item_detail_screen.dart';
 import '../features/ar/ar_space_screen.dart';
+import '../features/ar/ar_placement_screen.dart';
 import '../features/community/create_post_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -127,6 +128,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final itemId = state.uri.queryParameters['itemId'];
           return ArSpaceScreen(itemId: itemId);
+        },
+      ),
+      GoRoute(
+        path: '/ar-placement',
+        builder: (context, state) {
+          final modelPath = state.uri.queryParameters['model'] ?? '';
+          final itemName = state.uri.queryParameters['name'] ?? 'Furniture';
+          return ArPlacementScreen(modelPath: modelPath, itemName: itemName);
         },
       ),
       GoRoute(

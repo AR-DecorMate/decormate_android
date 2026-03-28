@@ -9,6 +9,8 @@ dependencies {
     // Firebase BoM (manages all Firebase versions)
     implementation(platform("com.google.firebase:firebase-bom:34.6.0"))
 
+    implementation("com.google.ar:core:1.51.0")
+
     // Firebase Authentication (required)
     implementation("com.google.firebase:firebase-auth")
 
@@ -21,7 +23,7 @@ dependencies {
 
 android {
     namespace = "com.example.decormate_android"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -35,7 +37,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.decormate_android"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -50,6 +50,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_dotenv: ^5.2.1
   camera: ^0.11.0+2
+  ar_flutter_plugin: ^0.7.3
+
+dependency_overrides:
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

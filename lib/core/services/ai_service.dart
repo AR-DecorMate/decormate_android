@@ -8,15 +8,26 @@ class AiService {
   GenerativeModel? _textModel;
   GenerativeModel? _visionModel;
   ChatSession? _chat;
+  bool _usingFallback = false;
 
-  static String get _apiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  static String get _primaryKey => dotenv.env['GEMINI_API_KEY'] ?? '';
+  static String get _fallbackKey => dotenv.env['GEMINI_API_KEY_FALLBACK'] ?? '';
 
-  bool get isAvailable => _apiKey.isNotEmpty;
+  String get _activeKey => _usingFallback ? _fallbackKey : _primaryKey;
 
-  void _initModels() {
+  bool get isAvailable => _primaryKey.isNotEmpty || _fallbackKey.isNotEmpty;
+
+  void _initModels({bool forceFallback = false}) {
+    if (forceFallback && !_usingFallback && _fallbackKey.isNotEmpty) {
+      _usingFallback = true;
+      _textModel = null;
+      _visionModel = null;
+      _chat = null;
+      debugPrint('[AiService] Switching to fallback API key');
+    }
     if (_textModel != null) return;
-    final key = _apiKey;
-    debugPrint('[AiService] API key loaded: ${key.isEmpty ? "EMPTY" : "${key.substring(0, 8)}..."}');
+    final key = _activeKey;
+    debugPrint('[AiService] API key loaded (${_usingFallback ? "fallback" : "primary"}): ${key.isEmpty ? "EMPTY" : "${key.substring(0, 8)}..."}');
     if (key.isEmpty) return;
     _textModel = GenerativeModel(
       model: 'gemini-2.5-flash',
@@ -46,7 +57,13 @@ class AiService {
     } catch (e, stack) {
       debugPrint('[AiService] ERROR in sendMessage: $e');
       debugPrint('[AiService] Stack: $stack');
-      _chat = null; // Reset chat on error so next attempt starts fresh
+      _chat = null;
+      // Retry with fallback key if not already using it
+      if (!_usingFallback && _fallbackKey.isNotEmpty) {
+        debugPrint('[AiService] Retrying with fallback key...');
+        _initModels(forceFallback: true);
+        return sendMessage(prompt);
+      }
       return 'Error: $e';
     }
   }
@@ -66,6 +83,12 @@ class AiService {
     } catch (e, stack) {
       debugPrint('[AiService] ERROR in analyzeImage: $e');
       debugPrint('[AiService] Stack: $stack');
+      // Retry with fallback key if not already using it
+      if (!_usingFallback && _fallbackKey.isNotEmpty) {
+        debugPrint('[AiService] Retrying analyzeImage with fallback key...');
+        _initModels(forceFallback: true);
+        return analyzeImage(imageBytes, prompt);
+      }
       return 'Error: $e';
     }
   }
