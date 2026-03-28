@@ -5,6 +5,7 @@ class CatalogItem {
   final String name;
   final String description;
   final String category;
+  final String style; // 'casual' or 'luxury'
   final String thumbnailUrl;
   final String modelUrl;
   final Map<String, double> dimensions;
@@ -17,6 +18,7 @@ class CatalogItem {
     required this.description,
     required this.category,
     required this.thumbnailUrl,
+    this.style = 'casual',
     this.modelUrl = '',
     this.dimensions = const {},
     this.createdAt,
@@ -30,6 +32,7 @@ class CatalogItem {
       name: data['name'] ?? '',
       description: data['description'] ?? '',
       category: data['category'] ?? '',
+      style: data['style'] ?? 'casual',
       thumbnailUrl: data['thumbnail_url'] ?? '',
       modelUrl: data['model_url'] ?? '',
       dimensions: data['dimensions'] is Map
@@ -46,6 +49,7 @@ class CatalogItem {
       'name': name,
       'description': description,
       'category': category,
+      'style': style,
       'thumbnail_url': thumbnailUrl,
       'model_url': modelUrl,
       'dimensions': dimensions,

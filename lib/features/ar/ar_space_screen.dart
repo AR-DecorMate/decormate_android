@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,12 +33,52 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
   bool _isSaving = false;
   String? _aiTip;
 
+  CameraController? _cameraController;
+  bool _isCameraReady = false;
+  String? _cameraError;
+
   @override
   void initState() {
     super.initState();
     if (widget.itemId != null) {
       _currentItemId = widget.itemId;
     }
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    try {
+      final status = await Permission.camera.request();
+      if (!status.isGranted) {
+        if (mounted) setState(() => _cameraError = 'Camera permission denied');
+        return;
+      }
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (mounted) setState(() => _cameraError = 'No camera found');
+        return;
+      }
+      // Use back camera
+      final backCamera = cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+      _cameraController = CameraController(
+        backCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+      await _cameraController!.initialize();
+      if (mounted) setState(() => _isCameraReady = true);
+    } catch (e) {
+      if (mounted) setState(() => _cameraError = 'Camera error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
   }
 
   void _selectItem(CatalogItem item) {
@@ -144,49 +185,87 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
     return _buildNoModelScreen();
   }
 
+  Widget _buildCameraBackground() {
+    if (_isCameraReady && _cameraController != null) {
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(
+            width: _cameraController!.value.previewSize?.height ?? 1,
+            height: _cameraController!.value.previewSize?.width ?? 1,
+            child: CameraPreview(_cameraController!),
+          ),
+        ),
+      );
+    }
+    if (_cameraError != null) {
+      return Container(
+        color: Colors.black,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.videocam_off, color: Colors.white54, size: 48),
+              const SizedBox(height: 12),
+              Text(_cameraError!, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+            ],
+          ),
+        ),
+      );
+    }
+    return Container(
+      color: Colors.black,
+      child: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+    );
+  }
+
   Widget _buildNoModelScreen() {
     return Scaffold(
-      backgroundColor: Colors.white,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: AppColors.darkText),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: const Text("AR Space", style: TextStyle(color: AppColors.primaryPink)),
+        title: const Text("AR Space", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
       ),
       body: Stack(
         children: [
+          // CAMERA BACKGROUND
+          _buildCameraBackground(),
+
+          // OVERLAY HINT
           Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: const BoxDecoration(
-                      color: AppColors.backgroundBeige,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.view_in_ar, size: 64, color: AppColors.accent),
+                  Icon(Icons.view_in_ar, size: 48, color: Colors.white),
+                  SizedBox(height: 12),
+                  Text(
+                    "Point your camera at a space",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    "AR Visualizer",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.darkText),
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    "Select a furniture item from the catalog below to view it in augmented reality",
+                  SizedBox(height: 8),
+                  Text(
+                    "Select furniture from below to place it in your room",
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 15, color: Colors.grey, height: 1.4),
+                    style: TextStyle(fontSize: 14, color: Colors.white70, height: 1.4),
                   ),
                 ],
               ),
             ),
           ),
+
           ArCatalogSheet(
             selectedItemId: _currentItemId,
             onItemSelected: _selectItem,
@@ -198,14 +277,16 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
 
   Widget _buildArViewer(BuildContext context, String modelUrl, String name) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => context.pop(),
         ),
-        title: Text(name, style: const TextStyle(color: Colors.white)),
+        title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -219,6 +300,10 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
       ),
       body: Stack(
         children: [
+          // CAMERA BACKGROUND
+          _buildCameraBackground(),
+
+          // 3D MODEL VIEWER OVERLAY
           RepaintBoundary(
             key: _repaintKey,
             child: ModelViewer(
@@ -233,10 +318,38 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
             ),
           ),
 
+          // PROMINENT AR CAMERA BUTTON
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Tap the AR icon (cube) on the 3D viewer to open your camera and place this furniture in your room!'),
+                      duration: Duration(seconds: 4),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.view_in_ar, size: 22),
+                label: const Text('View in Your Room', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 6,
+                ),
+              ),
+            ),
+          ),
+
           // AI TIP BANNER
           if (_aiTip != null)
             Positioned(
-              bottom: 0,
+              bottom: 80,
               left: 0,
               right: 0,
               child: _AiTipBanner(

@@ -99,6 +99,24 @@ class ItemDetailScreen extends ConsumerWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
+                              color: item.style == 'luxury'
+                                  ? Colors.amber.shade50
+                                  : AppColors.backgroundBeige,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              item.style == 'luxury' ? '✨ Luxury' : '🪑 Casual',
+                              style: TextStyle(
+                                color: item.style == 'luxury' ? Colors.amber.shade800 : AppColors.darkText,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
                               color: AppColors.primaryPink.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),

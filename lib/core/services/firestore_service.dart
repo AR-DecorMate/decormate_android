@@ -75,12 +75,16 @@ class FirestoreService {
   }
 
   // ── Catalog ─────────────────────────────────────────────────
-  Future<List<CatalogItem>> getCatalogItems(String category) async {
+  Future<List<CatalogItem>> getCatalogItems(String category, {String? style}) async {
     final snap = await _db
         .collection('catalog_items')
         .where('category', isEqualTo: category)
         .get();
-    return snap.docs.map(CatalogItem.fromFirestore).toList();
+    final items = snap.docs.map(CatalogItem.fromFirestore).toList();
+    if (style != null) {
+      return items.where((item) => item.style == style).toList();
+    }
+    return items;
   }
 
   Future<CatalogItem?> getCatalogItem(String itemId) async {

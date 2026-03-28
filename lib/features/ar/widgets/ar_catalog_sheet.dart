@@ -21,15 +21,23 @@ class ArCatalogSheet extends ConsumerStatefulWidget {
 
 class _ArCatalogSheetState extends ConsumerState<ArCatalogSheet> {
   String _selectedCategory = 'Sofa';
+  String _selectedStyle = 'All'; // 'All', 'Casual', 'Luxury'
 
   static const _categories = [
     'Sofa', 'Bed', 'Table', 'Chair', 'Lamps', 'Frames', 'Fan',
     'Lights', 'Curtains', 'Washbasin', 'Tap', 'Windows', 'Decor', 'Chandelier',
   ];
 
+  static const _styles = ['All', 'Casual', 'Luxury'];
+
+  String get _providerKey {
+    if (_selectedStyle == 'All') return _selectedCategory;
+    return '$_selectedCategory|${_selectedStyle.toLowerCase()}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final itemsAsync = ref.watch(catalogItemsProvider(_selectedCategory));
+    final itemsAsync = ref.watch(catalogItemsProvider(_providerKey));
 
     return DraggableScrollableSheet(
       initialChildSize: 0.35,
@@ -85,6 +93,31 @@ class _ArCatalogSheetState extends ConsumerState<ArCatalogSheet> {
                       onSelected: (_) => setState(() => _selectedCategory = cat),
                     );
                   },
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // STYLE TOGGLE (Casual / Luxury)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: _styles.map((style) {
+                    final isSelected = style == _selectedStyle;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(style, style: TextStyle(
+                          color: isSelected ? Colors.white : AppColors.darkText,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        )),
+                        selected: isSelected,
+                        selectedColor: AppColors.primaryPink,
+                        backgroundColor: Colors.grey.shade100,
+                        onSelected: (_) => setState(() => _selectedStyle = style),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
               const SizedBox(height: 8),
