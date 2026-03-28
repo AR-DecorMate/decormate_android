@@ -12,6 +12,7 @@ categories available in the app: Sofa, Bed, Table, Chair, Lamps, Frames, Fan, Li
 Curtains, Washbasin, Tap, Windows, Decor, Chandelier.
 
 Keep responses under 200 words unless the user asks for detail.
+NEVER use markdown formatting like **bold**, *italic*, bullet points, or headers. Use plain text only.
 ''';
 
   static const unavailableMessage =
@@ -30,5 +31,5 @@ Keep responses under 200 words unless the user asks for detail.
   static String contextualTip(String itemName) =>
       'The user just placed a $itemName in their room using AR. '
       'Give ONE brief, helpful tip about positioning or complementary items. '
-      'Keep it under 30 words.';
+      'Keep it under 30 words. Do NOT use markdown, asterisks, or any formatting.';
 }

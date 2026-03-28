@@ -43,7 +43,7 @@ dependencies:
   cached_network_image: ^3.4.1
   shared_preferences: ^2.3.4
   permission_handler: ^11.3.1
-  image_gallery_saver_plus: ^3.0.5
+  image_gallery_saver_plus: ^4.0.1
   google_generative_ai: ^0.4.7
   model_viewer_plus: ^1.8.1
   google_fonts: ^6.2.1
@@ -83,6 +83,7 @@ flutter:
     - assets/images/google.png
     - assets/images/onboarding/
     - assets/images/home/
+    - assets/models/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

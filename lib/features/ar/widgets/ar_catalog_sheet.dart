@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../app/constants.dart';
 import '../../../core/models/catalog_item_model.dart';
 import '../../../core/providers/catalog_provider.dart';
@@ -144,8 +143,20 @@ class _ArCatalogSheetState extends ConsumerState<ArCatalogSheet> {
                       itemBuilder: (_, i) {
                         final item = items[i];
                         final isActive = item.id == widget.selectedItemId;
+                        final hasModel = item.modelUrl.isNotEmpty;
                         return GestureDetector(
-                          onTap: () => widget.onItemSelected(item),
+                          onTap: () {
+                            if (hasModel) {
+                              widget.onItemSelected(item);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Model coming soon!'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.white,
@@ -154,36 +165,55 @@ class _ArCatalogSheetState extends ConsumerState<ArCatalogSheet> {
                                   ? Border.all(color: AppColors.accent, width: 2)
                                   : Border.all(color: Colors.grey.shade200),
                             ),
-                            child: Column(
+                            child: Stack(
                               children: [
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                                    child: CachedNetworkImage(
-                                      imageUrl: item.thumbnailUrl,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      placeholder: (_, __) => Container(color: AppColors.backgroundBeige),
-                                      errorWidget: (_, __, ___) => Container(
-                                        color: AppColors.backgroundBeige,
-                                        child: const Icon(Icons.chair, color: AppColors.accent, size: 24),
+                                Column(
+                                  children: [
+                                    Expanded(
+                                      child: ClipRRect(
+                                        borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                                        child: Container(
+                                          color: AppColors.backgroundBeige,
+                                          width: double.infinity,
+                                          child: Icon(
+                                            hasModel ? Icons.view_in_ar : Icons.chair,
+                                            color: hasModel ? AppColors.accent : Colors.grey.shade400,
+                                            size: 28,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.all(4),
+                                      child: Text(
+                                        item.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                          color: hasModel ? AppColors.darkText : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (!hasModel)
+                                  Positioned(
+                                    top: 4,
+                                    right: 4,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade100,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        'Soon',
+                                        style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
                                       ),
                                     ),
                                   ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(4),
-                                  child: Text(
-                                    item.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                                      color: AppColors.darkText,
-                                    ),
-                                  ),
-                                ),
                               ],
                             ),
                           ),

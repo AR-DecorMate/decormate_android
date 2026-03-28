@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,6 +82,8 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
     super.dispose();
   }
 
+  bool _aiLoading = false;
+
   void _selectItem(CatalogItem item) {
     setState(() {
       _currentModelUrl = item.modelUrl;
@@ -88,18 +91,26 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
       _currentItemId = item.id;
       _aiTip = null;
     });
-    _fetchAiTip(item.name);
   }
 
   Future<void> _fetchAiTip(String itemName) async {
     final aiService = AiService();
     if (!aiService.isAvailable) return;
+    setState(() => _aiLoading = true);
     try {
-      final tip = await aiService.sendMessage(AiPrompts.contextualTip(itemName));
+      var tip = await aiService.sendMessage(AiPrompts.contextualTip(itemName));
+      // Strip markdown formatting
+      tip = tip
+          .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
+          .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
+          .replaceAll(RegExp(r'#{1,6}\s'), '')
+          .replaceAll(RegExp(r'`(.+?)`'), r'$1');
       if (mounted) {
-        setState(() => _aiTip = tip);
+        setState(() { _aiTip = tip; _aiLoading = false; });
       }
-    } catch (_) {}
+    } catch (_) {
+      if (mounted) setState(() => _aiLoading = false);
+    }
   }
 
   Future<void> _takeScreenshot() async {
@@ -166,7 +177,7 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
                 _currentItemName = item.name;
                 _currentItemId = item.id;
               });
-              _fetchAiTip(item.name);
+              // Don't auto-trigger AI
             }
           });
           return _buildArViewer(context, item.modelUrl, item.name);
@@ -198,24 +209,15 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
         ),
       );
     }
-    if (_cameraError != null) {
-      return Container(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.videocam_off, color: Colors.white54, size: 48),
-              const SizedBox(height: 12),
-              Text(_cameraError!, style: const TextStyle(color: Colors.white54, fontSize: 14)),
-            ],
-          ),
-        ),
-      );
-    }
+    // Fallback: gradient background when camera isn't available
     return Container(
-      color: Colors.black,
-      child: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1a1a2e), Color(0xFF16213e), Color(0xFF0f3460)],
+        ),
+      ),
     );
   }
 
@@ -234,10 +236,7 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
       ),
       body: Stack(
         children: [
-          // CAMERA BACKGROUND
           _buildCameraBackground(),
-
-          // OVERLAY HINT
           Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -265,7 +264,6 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
               ),
             ),
           ),
-
           ArCatalogSheet(
             selectedItemId: _currentItemId,
             onItemSelected: _selectItem,
@@ -277,91 +275,80 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
 
   Widget _buildArViewer(BuildContext context, String modelUrl, String name) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFFF5F0EB),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
+        backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.darkText),
           onPressed: () => context.pop(),
         ),
-        title: Text(name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text(name, style: const TextStyle(color: AppColors.primaryPink, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
             icon: _isSaving
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.camera_alt, color: Colors.white),
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
+                : const Icon(Icons.camera_alt, color: AppColors.darkText),
             onPressed: _isSaving ? null : _takeScreenshot,
             tooltip: 'Take Screenshot',
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
         children: [
-          // CAMERA BACKGROUND
-          _buildCameraBackground(),
-
-          // 3D MODEL VIEWER OVERLAY
-          RepaintBoundary(
-            key: _repaintKey,
-            child: ModelViewer(
-              src: modelUrl,
-              alt: name,
-              ar: true,
-              arModes: const ['scene-viewer', 'webxr', 'quick-look'],
-              autoRotate: true,
-              cameraControls: true,
-              disableZoom: false,
-              backgroundColor: Colors.transparent,
+          // 3D MODEL VIEWER — takes upper portion, no gesture conflict
+          Expanded(
+            flex: 3,
+            child: RepaintBoundary(
+              key: _repaintKey,
+              child: ModelViewer(
+                src: modelUrl,
+                alt: name,
+                ar: true,
+                arModes: const ['scene-viewer', 'webxr', 'quick-look'],
+                autoRotate: true,
+                cameraControls: true,
+                disableZoom: false,
+                backgroundColor: const Color(0xFFF5F0EB),
+              ),
             ),
           ),
 
-          // PROMINENT AR CAMERA BUTTON
-          Positioned(
-            bottom: 16,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tap the AR icon (cube) on the 3D viewer to open your camera and place this furniture in your room!'),
-                      duration: Duration(seconds: 4),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.view_in_ar, size: 22),
-                label: const Text('View in Your Room', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  elevation: 6,
+          // AI TIP BANNER or ASK AI BUTTON
+          if (_aiTip != null)
+            _AiTipBanner(
+              tip: _aiTip!,
+              onDismiss: () => setState(() => _aiTip = null),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _aiLoading || _currentItemName == null
+                      ? null
+                      : () => _fetchAiTip(_currentItemName!),
+                  icon: _aiLoading
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.auto_awesome, size: 18),
+                  label: Text(_aiLoading ? 'Thinking...' : 'Ask AI about this piece'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.accent,
+                    side: const BorderSide(color: AppColors.accent),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // AI TIP BANNER
-          if (_aiTip != null)
-            Positioned(
-              bottom: 80,
-              left: 0,
-              right: 0,
-              child: _AiTipBanner(
-                tip: _aiTip!,
-                onDismiss: () => setState(() => _aiTip = null),
-              ),
+          // CATALOG SECTION — bottom portion, fully scrollable
+          Expanded(
+            flex: 2,
+            child: _BottomCatalog(
+              selectedItemId: _currentItemId,
+              onItemSelected: _selectItem,
             ),
-
-          // CATALOG SHEET
-          ArCatalogSheet(
-            selectedItemId: _currentItemId,
-            onItemSelected: _selectItem,
           ),
         ],
       ),
@@ -377,7 +364,7 @@ class _AiTipBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.accent.withValues(alpha: 0.95),
@@ -398,6 +385,219 @@ class _AiTipBanner extends StatelessWidget {
           GestureDetector(
             onTap: onDismiss,
             child: const Icon(Icons.close, color: Colors.white70, size: 18),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomCatalog extends ConsumerStatefulWidget {
+  final String? selectedItemId;
+  final ValueChanged<CatalogItem> onItemSelected;
+
+  const _BottomCatalog({
+    this.selectedItemId,
+    required this.onItemSelected,
+  });
+
+  @override
+  ConsumerState<_BottomCatalog> createState() => _BottomCatalogState();
+}
+
+class _BottomCatalogState extends ConsumerState<_BottomCatalog> {
+  String _selectedCategory = 'Sofa';
+  String _selectedStyle = 'All';
+
+  static const _categories = [
+    'Sofa', 'Bed', 'Table', 'Chair', 'Lamps', 'Frames', 'Fan',
+    'Lights', 'Curtains', 'Washbasin', 'Tap', 'Windows', 'Decor', 'Chandelier',
+  ];
+
+  static const _styles = ['All', 'Casual', 'Luxury'];
+
+  String get _providerKey {
+    if (_selectedStyle == 'All') return _selectedCategory;
+    return '$_selectedCategory|${_selectedStyle.toLowerCase()}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final itemsAsync = ref.watch(catalogItemsProvider(_providerKey));
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
+      ),
+      child: Column(
+        children: [
+          // DRAG HANDLE
+          Container(
+            width: 40, height: 5,
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+
+          // CATEGORY CHIPS
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: _categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) {
+                final cat = _categories[i];
+                final isSelected = cat == _selectedCategory;
+                return ChoiceChip(
+                  label: Text(cat, style: TextStyle(
+                    color: isSelected ? Colors.white : AppColors.darkText,
+                    fontSize: 11,
+                  )),
+                  selected: isSelected,
+                  selectedColor: AppColors.accent,
+                  backgroundColor: AppColors.backgroundBeige,
+                  onSelected: (_) => setState(() => _selectedCategory = cat),
+                  visualDensity: VisualDensity.compact,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // STYLE TOGGLE
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: _styles.map((style) {
+                final isSelected = style == _selectedStyle;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                    label: Text(style, style: TextStyle(
+                      color: isSelected ? Colors.white : AppColors.darkText,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    )),
+                    selected: isSelected,
+                    selectedColor: AppColors.primaryPink,
+                    backgroundColor: Colors.grey.shade100,
+                    onSelected: (_) => setState(() => _selectedStyle = style),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 4),
+
+          // ITEMS GRID
+          Expanded(
+            child: itemsAsync.when(
+              data: (items) {
+                if (items.isEmpty) {
+                  return const Center(
+                    child: Text('No items in this category', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  );
+                }
+                return GridView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.85,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (_, i) {
+                    final item = items[i];
+                    final isActive = item.id == widget.selectedItemId;
+                    final hasModel = item.modelUrl.isNotEmpty;
+                    return GestureDetector(
+                      onTap: () {
+                        if (hasModel) {
+                          widget.onItemSelected(item);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Model coming soon!'),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isActive
+                              ? Border.all(color: AppColors.accent, width: 2)
+                              : Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Stack(
+                          children: [
+                            Column(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+                                    child: Container(
+                                      color: AppColors.backgroundBeige,
+                                      width: double.infinity,
+                                      child: Icon(
+                                        hasModel ? Icons.view_in_ar : Icons.chair,
+                                        color: hasModel ? AppColors.accent : Colors.grey.shade400,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Text(
+                                    item.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                      color: hasModel ? AppColors.darkText : Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (!hasModel)
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade100,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'Soon',
+                                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
+              error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(fontSize: 12))),
+            ),
           ),
         ],
       ),

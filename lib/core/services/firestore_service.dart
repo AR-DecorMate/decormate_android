@@ -75,12 +75,89 @@ class FirestoreService {
   }
 
   // ── Catalog ─────────────────────────────────────────────────
+
+  static const _testItems = [
+    CatalogItem(
+      id: 'test_sofa_casual',
+      name: 'Modern Sofa',
+      description: 'A comfortable modern sofa for your living room.',
+      category: 'Sofa',
+      style: 'casual',
+      thumbnailUrl: '',
+      modelUrl: '',
+      isTrending: true,
+    ),
+    CatalogItem(
+      id: 'test_sofa_luxury',
+      name: 'Luxury Velvet Sofa',
+      description: 'An elegant velvet sofa with premium finish.',
+      category: 'Sofa',
+      style: 'luxury',
+      thumbnailUrl: '',
+      modelUrl: '',
+      isTrending: true,
+    ),
+    CatalogItem(
+      id: 'test_bed_casual',
+      name: 'Casual Bed',
+      description: 'A casual bed for your bedroom.',
+      category: 'Bed',
+      style: 'casual',
+      thumbnailUrl: '',
+      modelUrl: 'assets/models/bed.glb',
+      isTrending: true,
+    ),
+    CatalogItem(
+      id: 'test_chair_casual',
+      name: 'Simple Chair',
+      description: 'A simple wooden chair.',
+      category: 'Chair',
+      style: 'casual',
+      thumbnailUrl: '',
+      modelUrl: '',
+    ),
+    CatalogItem(
+      id: 'test_chair_luxury',
+      name: 'Royal Armchair',
+      description: 'A premium leather armchair.',
+      category: 'Chair',
+      style: 'luxury',
+      thumbnailUrl: '',
+      modelUrl: '',
+      isTrending: true,
+    ),
+    CatalogItem(
+      id: 'test_table_casual',
+      name: 'Coffee Table',
+      description: 'A wooden coffee table.',
+      category: 'Table',
+      style: 'casual',
+      thumbnailUrl: '',
+      modelUrl: '',
+    ),
+    CatalogItem(
+      id: 'test_lamp_luxury',
+      name: 'Crystal Lamp',
+      description: 'An elegant crystal table lamp.',
+      category: 'Lamps',
+      style: 'luxury',
+      thumbnailUrl: '',
+      modelUrl: '',
+    ),
+  ];
+
   Future<List<CatalogItem>> getCatalogItems(String category, {String? style}) async {
     final snap = await _db
         .collection('catalog_items')
         .where('category', isEqualTo: category)
         .get();
-    final items = snap.docs.map(CatalogItem.fromFirestore).toList();
+    var items = snap.docs.map(CatalogItem.fromFirestore).toList();
+
+    // Add hardcoded test items if Firestore is empty
+    if (items.isEmpty) {
+      items = _testItems.where((i) => i.category == category).toList();
+    }
+
     if (style != null) {
       return items.where((item) => item.style == style).toList();
     }
@@ -89,7 +166,11 @@ class FirestoreService {
 
   Future<CatalogItem?> getCatalogItem(String itemId) async {
     final doc = await _db.collection('catalog_items').doc(itemId).get();
-    if (!doc.exists) return null;
+    if (!doc.exists) {
+      // Check hardcoded test items
+      final match = _testItems.where((i) => i.id == itemId);
+      return match.isNotEmpty ? match.first : null;
+    }
     return CatalogItem.fromFirestore(doc);
   }
 

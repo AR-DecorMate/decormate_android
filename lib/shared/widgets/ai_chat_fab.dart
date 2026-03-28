@@ -123,7 +123,12 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
     _scrollToBottom();
 
     try {
-      final response = await _aiService.sendMessage(text);
+      var response = await _aiService.sendMessage(text);
+      response = response
+          .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
+          .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
+          .replaceAll(RegExp(r'^#+\s', multiLine: true), '')
+          .replaceAll(RegExp(r'`([^`]+)`'), r'$1');
       if (mounted) {
         setState(() {
           _messages.add(_ChatMessage(text: response, isUser: false));
@@ -156,7 +161,12 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
       });
       _scrollToBottom();
 
-      final response = await _aiService.analyzeImage(bytes, AiPrompts.roomAnalysisPrompt);
+      var response = await _aiService.analyzeImage(bytes, AiPrompts.roomAnalysisPrompt);
+      response = response
+          .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
+          .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
+          .replaceAll(RegExp(r'^#+\s', multiLine: true), '')
+          .replaceAll(RegExp(r'`([^`]+)`'), r'$1');
       if (mounted) {
         setState(() {
           _messages.add(_ChatMessage(text: response, isUser: false));
