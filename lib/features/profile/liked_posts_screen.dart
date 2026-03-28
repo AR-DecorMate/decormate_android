@@ -3,18 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/user_provider.dart';
 import '../../core/models/post_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 final _likedPostsProvider = StreamProvider<List<PostModel>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return Stream.value([]);
-  return FirebaseFirestore.instance
-      .collection('posts')
-      .where('likedBy', arrayContains: user.uid)
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snap) => snap.docs.map((d) => PostModel.fromFirestore(d)).toList());
+  return ref.watch(firestoreServiceProvider).streamLikedPosts(user.uid);
 });
 
 class LikedPostsScreen extends ConsumerWidget {
@@ -60,7 +55,7 @@ class LikedPostsScreen extends ConsumerWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(AppRadius.card),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 3)),
+                    BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 10, offset: const Offset(0, 3)),
                   ],
                 ),
                 child: Column(
@@ -73,7 +68,7 @@ class LikedPostsScreen extends ConsumerWidget {
                         height: 200,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorWidget: (_, __, ___) => Container(
+                        errorWidget: (context, imageUrl, error) => Container(
                           height: 200,
                           color: AppColors.backgroundBeige,
                           child: const Icon(Icons.image, size: 48),

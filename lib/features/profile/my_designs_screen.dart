@@ -3,18 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/auth_provider.dart';
-import '../../core/models/post_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../core/providers/user_provider.dart';
 
-final _myDesignsProvider = StreamProvider<List<PostModel>>((ref) {
+final _myDesignsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final user = ref.watch(currentUserProvider);
   if (user == null) return Stream.value([]);
-  return FirebaseFirestore.instance
-      .collection('posts')
-      .where('userId', isEqualTo: user.uid)
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snap) => snap.docs.map((d) => PostModel.fromFirestore(d)).toList());
+  return ref.watch(firestoreServiceProvider).streamMyDesigns(user.uid);
 });
 
 class MyDesignsScreen extends ConsumerWidget {
@@ -36,8 +30,8 @@ class MyDesignsScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: designsAsync.when(
-        data: (posts) {
-          if (posts.isEmpty) {
+        data: (designs) {
+          if (designs.isEmpty) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -57,34 +51,52 @@ class MyDesignsScreen extends ConsumerWidget {
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
-            itemCount: posts.length,
+            itemCount: designs.length,
             itemBuilder: (_, i) {
-              final post = posts[i];
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  image: DecorationImage(
-                    image: CachedNetworkImageProvider(post.imageUrl),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppRadius.card),
-                    gradient: LinearGradient(
-                      colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
+              final design = designs[i];
+              final imageUrl = (design['image_url'] as String?) ?? '';
+
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (imageUrl.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: imageUrl,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, imageUrl, error) => Container(
+                          color: AppColors.backgroundBeige,
+                          child: const Icon(Icons.image, size: 40, color: AppColors.accent),
+                        ),
+                      )
+                    else
+                      Container(
+                        color: AppColors.backgroundBeige,
+                        child: const Icon(Icons.image, size: 40, color: AppColors.accent),
+                      ),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black.withAlpha(153)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
                     ),
-                  ),
-                  padding: const EdgeInsets.all(10),
-                  alignment: Alignment.bottomLeft,
-                  child: Text(
-                    post.caption,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
-                  ),
+                    const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Text(
+                          'AR Design',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               );
             },

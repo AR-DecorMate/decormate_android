@@ -238,8 +238,11 @@ class FirestoreService {
     return _db
         .collection('posts')
         .where('liked_by', arrayContains: uid)
-        .orderBy('created_at', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map(PostModel.fromFirestore).toList());
+        .map((snap) {
+          final posts = snap.docs.map(PostModel.fromFirestore).toList();
+          posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return posts;
+        });
   }
 }
