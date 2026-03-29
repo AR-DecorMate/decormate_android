@@ -20,6 +20,40 @@ class FirestoreService {
     return _db.collection('users').doc(uid).update(data);
   }
 
+  Future<void> syncUserPostsPublicData({
+    required String uid,
+    required String name,
+    String? avatarUrl,
+  }) async {
+    final posts = await _db.collection('posts').where('user_id', isEqualTo: uid).get();
+    if (posts.docs.isEmpty) return;
+
+    WriteBatch batch = _db.batch();
+    var operationCount = 0;
+
+    Future<void> flushBatch() async {
+      if (operationCount == 0) return;
+      await batch.commit();
+      batch = _db.batch();
+      operationCount = 0;
+    }
+
+    for (final post in posts.docs) {
+      final updates = <String, dynamic>{
+        'user_name': name,
+        'user_avatar_url': avatarUrl != null && avatarUrl.isNotEmpty ? avatarUrl : FieldValue.delete(),
+      };
+      batch.update(post.reference, updates);
+      operationCount += 1;
+
+      if (operationCount >= 450) {
+        await flushBatch();
+      }
+    }
+
+    await flushBatch();
+  }
+
   // ── Posts ────────────────────────────────────────────────────
   Stream<List<PostModel>> streamPosts({int limit = 20}) {
     return _db

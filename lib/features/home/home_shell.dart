@@ -19,11 +19,13 @@ class HomeShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = _currentIndex(context);
+    final location = GoRouterState.of(context).matchedLocation;
+    final showAiFab = !location.startsWith('/community');
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: child,
-      floatingActionButton: const AiChatFab(),
+      floatingActionButton: showAiFab ? const AiChatFab() : null,
       bottomNavigationBar: BottomNavigationBar(
         onTap: (i) => context.go(_tabs[i]),
         currentIndex: index,

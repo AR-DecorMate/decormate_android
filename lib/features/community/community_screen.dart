@@ -74,7 +74,19 @@ class _PostCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
+    final currentUserProfile = ref.watch(userProfileProvider).valueOrNull;
     final isLiked = currentUser != null && post.isLikedBy(currentUser.uid);
+    final displayUserName = currentUser != null &&
+            currentUser.uid == post.userId &&
+            currentUserProfile != null &&
+            currentUserProfile.name.isNotEmpty
+        ? currentUserProfile.name
+        : post.userName;
+    final displayUserAvatarUrl = currentUser != null &&
+            currentUser.uid == post.userId &&
+            (currentUserProfile?.avatarUrl?.isNotEmpty ?? false)
+        ? currentUserProfile!.avatarUrl
+        : post.userAvatarUrl;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 22),
@@ -82,7 +94,7 @@ class _PostCard extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 12, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -96,19 +108,19 @@ class _PostCard extends ConsumerWidget {
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: AppColors.backgroundBeige,
-                  backgroundImage: post.userAvatarUrl != null && post.userAvatarUrl!.isNotEmpty
-                      ? CachedNetworkImageProvider(post.userAvatarUrl!)
+                  backgroundImage: displayUserAvatarUrl != null && displayUserAvatarUrl.isNotEmpty
+                      ? CachedNetworkImageProvider(displayUserAvatarUrl)
                       : null,
-                  child: post.userAvatarUrl == null || post.userAvatarUrl!.isEmpty
+                  child: displayUserAvatarUrl == null || displayUserAvatarUrl.isEmpty
                       ? Text(
-                          post.userName.isNotEmpty ? post.userName[0].toUpperCase() : '?',
+                          displayUserName.isNotEmpty ? displayUserName[0].toUpperCase() : '?',
                           style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 20),
                         )
                       : null,
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  post.userName,
+                  displayUserName,
                   style: const TextStyle(fontSize: 15, color: AppColors.darkText, fontWeight: FontWeight.w600),
                 ),
               ],
@@ -123,12 +135,12 @@ class _PostCard extends ConsumerWidget {
               height: 260,
               width: double.infinity,
               fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
+              placeholder: (context, imageUrl) => Container(
                 height: 260,
                 color: AppColors.backgroundBeige,
                 child: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
               ),
-              errorWidget: (_, __, ___) => Container(
+              errorWidget: (context, imageUrl, error) => Container(
                 height: 260,
                 color: AppColors.backgroundBeige,
                 child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
@@ -188,6 +200,7 @@ class _PostCard extends ConsumerWidget {
   void _openCommentsSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       backgroundColor: Colors.white,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -223,13 +236,20 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     final userProfile = ref.read(userProfileProvider).valueOrNull;
     if (currentUser == null) return;
 
+    final commentUserName = userProfile?.name.isNotEmpty == true
+        ? userProfile!.name
+        : (currentUser.displayName ?? 'User');
+    final commentUserAvatarUrl = userProfile?.avatarUrl?.isNotEmpty == true
+        ? userProfile!.avatarUrl
+        : currentUser.photoURL;
+
     await ref.read(firestoreServiceProvider).addComment(
       widget.postId,
       CommentModel(
         id: '',
         userId: currentUser.uid,
-        userName: userProfile?.name ?? currentUser.displayName ?? 'User',
-        userAvatarUrl: userProfile?.avatarUrl,
+        userName: commentUserName,
+        userAvatarUrl: commentUserAvatarUrl,
         text: text,
         createdAt: DateTime.now(),
       ),
@@ -240,6 +260,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
   @override
   Widget build(BuildContext context) {
     final commentsAsync = ref.watch(commentsProvider(widget.postId));
+    final currentUser = ref.watch(currentUserProvider);
+    final currentUserProfile = ref.watch(userProfileProvider).valueOrNull;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -252,7 +274,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
               height: 5,
               width: 55,
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.4),
+                color: Colors.grey.withAlpha(102),
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -271,16 +293,30 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                     itemCount: comments.length,
                     itemBuilder: (_, i) {
                       final c = comments[i];
+                      final displayUserName = currentUser != null &&
+                              currentUser.uid == c.userId &&
+                              currentUserProfile != null &&
+                              currentUserProfile.name.isNotEmpty
+                          ? currentUserProfile.name
+                          : c.userName;
+                      final displayUserAvatarUrl = currentUser != null &&
+                              currentUser.uid == c.userId &&
+                              (currentUserProfile?.avatarUrl?.isNotEmpty ?? false)
+                          ? currentUserProfile!.avatarUrl
+                          : c.userAvatarUrl;
+
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: AppColors.backgroundBeige,
-                          backgroundImage: c.userAvatarUrl != null ? CachedNetworkImageProvider(c.userAvatarUrl!) : null,
-                          child: c.userAvatarUrl == null
-                              ? Text(c.userName.isNotEmpty ? c.userName[0].toUpperCase() : '?',
+                          backgroundImage: displayUserAvatarUrl != null && displayUserAvatarUrl.isNotEmpty
+                              ? CachedNetworkImageProvider(displayUserAvatarUrl)
+                              : null,
+                          child: displayUserAvatarUrl == null || displayUserAvatarUrl.isEmpty
+                              ? Text(displayUserName.isNotEmpty ? displayUserName[0].toUpperCase() : '?',
                                   style: const TextStyle(color: AppColors.accent))
                               : null,
                         ),
-                        title: Text(c.userName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        title: Text(displayUserName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                         subtitle: Text(c.text),
                       );
                     },

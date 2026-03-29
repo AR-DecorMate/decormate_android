@@ -2,21 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
-import '../../core/providers/auth_provider.dart';
 import '../../core/providers/user_provider.dart';
-
-final _myDesignsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return Stream.value([]);
-  return ref.watch(firestoreServiceProvider).streamMyDesigns(user.uid);
-});
 
 class MyDesignsScreen extends ConsumerWidget {
   const MyDesignsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final designsAsync = ref.watch(_myDesignsProvider);
+    final designsAsync = ref.watch(myDesignsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,

@@ -63,7 +63,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         id: '',
         userId: user.uid,
         userName: profile?.name ?? user.displayName ?? 'User',
-        userAvatarUrl: profile?.avatarUrl,
+        userAvatarUrl: (profile?.avatarUrl?.isNotEmpty ?? false) ? profile!.avatarUrl : user.photoURL,
         caption: _captionController.text.trim(),
         imageUrl: imageUrl,
         createdAt: DateTime.now(),

@@ -2,22 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
-import '../../core/providers/auth_provider.dart';
 import '../../core/providers/user_provider.dart';
-import '../../core/models/post_model.dart';
-
-final _likedPostsProvider = StreamProvider<List<PostModel>>((ref) {
-  final user = ref.watch(currentUserProvider);
-  if (user == null) return Stream.value([]);
-  return ref.watch(firestoreServiceProvider).streamLikedPosts(user.uid);
-});
 
 class LikedPostsScreen extends ConsumerWidget {
   const LikedPostsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final postsAsync = ref.watch(_likedPostsProvider);
+    final postsAsync = ref.watch(likedPostsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,

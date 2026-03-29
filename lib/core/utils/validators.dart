@@ -1,6 +1,7 @@
 class Validators {
   static final _emailRegex = RegExp(r'^[\w\-.+]+@[\w\-]+\.[\w\-.]+$');
   static final _phoneRegex = RegExp(r'^\+?[\d\s\-]{7,15}$');
+  static final _dobRegex = RegExp(r'^(\d{2})\/(\d{2})\/(\d{4})$');
 
   static String? validateEmail(String? value) {
     if (value == null || value.trim().isEmpty) return 'Email is required';
@@ -36,6 +37,23 @@ class Validators {
 
   static String? validateDob(String? value) {
     if (value == null || value.trim().isEmpty) return 'Date of birth is required';
+    final normalized = value.trim().replaceAll(' ', '');
+    final match = _dobRegex.firstMatch(normalized);
+    if (match == null) return 'Use dd/mm/yyyy';
+
+    final day = int.parse(match.group(1)!);
+    final month = int.parse(match.group(2)!);
+    final year = int.parse(match.group(3)!);
+    if (month < 1 || month > 12) return 'Enter a valid date';
+
+    final parsed = DateTime.tryParse(
+      '$year-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}',
+    );
+    if (parsed == null || parsed.year != year || parsed.month != month || parsed.day != day) {
+      return 'Enter a valid date';
+    }
+    if (parsed.isAfter(DateTime.now())) return 'Date of birth cannot be in the future';
+
     return null;
   }
 }

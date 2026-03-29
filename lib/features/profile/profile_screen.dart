@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/auth_provider.dart';
+import '../../core/providers/saved_designs_provider.dart';
 import '../../core/providers/user_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -12,6 +13,9 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(userProfileProvider);
+    final savedDesignsAsync = ref.watch(savedDesignsProvider);
+    final myDesignsAsync = ref.watch(myDesignsProvider);
+    final likedPostsAsync = ref.watch(likedPostsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -20,6 +24,19 @@ class ProfileScreen extends ConsumerWidget {
           physics: const BouncingScrollPhysics(),
           child: userAsync.when(
             data: (user) {
+              final designsCount = myDesignsAsync.maybeWhen(
+                data: (designs) => designs.length.toString(),
+                orElse: () => '...',
+              );
+              final savedCount = savedDesignsAsync.maybeWhen(
+                data: (saved) => saved.length.toString(),
+                orElse: () => '...',
+              );
+              final likesCount = likedPostsAsync.maybeWhen(
+                data: (posts) => posts.length.toString(),
+                orElse: () => '...',
+              );
+
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -67,9 +84,9 @@ class ProfileScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        _statBox("Designs", "0"),
-                        _statBox("Saved", "0"),
-                        _statBox("Likes", "0"),
+                        _statBox("Designs", designsCount),
+                        _statBox("Saved", savedCount),
+                        _statBox("Likes", likesCount),
                       ],
                     ),
 
@@ -121,7 +138,7 @@ class ProfileScreen extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: isDestructive ? Colors.red.withOpacity(0.05) : AppColors.backgroundBeige,
+        color: isDestructive ? Colors.red.withAlpha(13) : AppColors.backgroundBeige,
         borderRadius: BorderRadius.circular(AppRadius.input),
       ),
       child: ListTile(

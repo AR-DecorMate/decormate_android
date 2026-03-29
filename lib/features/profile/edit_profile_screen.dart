@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -56,6 +57,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     setState(() => _isLoading = true);
     try {
       final user = ref.read(currentUserProvider);
+      final currentProfile = ref.read(userProfileProvider).valueOrNull;
       if (user == null) return;
       String? avatarUrl;
       if (_newAvatarBytes != null) {
@@ -64,17 +66,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       final updates = <String, dynamic>{
         'name': _nameController.text.trim(),
         'mobile': _mobileController.text.trim(),
+        'dob': _dobController.text.trim(),
       };
       if (avatarUrl != null) updates['avatar_url'] = avatarUrl;
-      await ref.read(firestoreServiceProvider).updateUser(user.uid, updates);
+      final firestoreService = ref.read(firestoreServiceProvider);
+      await firestoreService.updateUser(user.uid, updates);
+      await firestoreService.syncUserPostsPublicData(
+        uid: user.uid,
+        name: _nameController.text.trim(),
+        avatarUrl: avatarUrl ?? currentProfile?.avatarUrl,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profile updated")));
         context.pop();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -166,9 +179,13 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         String msg = 'Failed to change password';
-        if (e.code == 'wrong-password') msg = 'Current password is incorrect';
-        else if (e.code == 'weak-password') msg = 'New password is too weak';
-        else if (e.code == 'requires-recent-login') msg = 'Please log out and log in again first';
+        if (e.code == 'wrong-password') {
+          msg = 'Current password is incorrect';
+        } else if (e.code == 'weak-password') {
+          msg = 'New password is too weak';
+        } else if (e.code == 'requires-recent-login') {
+          msg = 'Please log out and log in again first';
+        }
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
@@ -214,12 +231,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         CircleAvatar(
                           radius: 55,
                           backgroundColor: AppColors.backgroundBeige,
-                          backgroundImage: _newAvatarBytes != null ? MemoryImage(_newAvatarBytes!) : null,
+                          backgroundImage: _newAvatarBytes != null
+                              ? MemoryImage(_newAvatarBytes!)
+                              : (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                                  ? CachedNetworkImageProvider(user.avatarUrl!)
+                                  : null),
                           child: _newAvatarBytes == null
-                              ? Text(
-                                  (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : '?',
-                                  style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 40),
-                                )
+                              ? ((user?.avatarUrl == null || user!.avatarUrl!.isEmpty)
+                                  ? Text(
+                                      (user?.name.isNotEmpty ?? false) ? user!.name[0].toUpperCase() : '?',
+                                      style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 40),
+                                    )
+                                  : null)
                               : null,
                         ),
                         Positioned(
@@ -244,7 +267,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       labelText: 'Email',
                       labelStyle: const TextStyle(color: AppColors.hintColor),
                       filled: true,
-                      fillColor: AppColors.backgroundBeige.withOpacity(0.6),
+                      fillColor: AppColors.backgroundBeige.withAlpha(153),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.input), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
@@ -260,7 +283,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       labelText: 'Date of Birth',
                       labelStyle: const TextStyle(color: AppColors.hintColor),
                       filled: true,
-                      fillColor: AppColors.backgroundBeige.withOpacity(0.6),
+                      fillColor: AppColors.backgroundBeige.withAlpha(153),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadius.input), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),

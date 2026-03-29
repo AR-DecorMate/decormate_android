@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +38,19 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     super.dispose();
   }
 
+  Future<void> _pickDob() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000, 1, 1),
+      firstDate: DateTime(1940),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      _dobController.text =
+          '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+    }
+  }
+
   Future<void> _signUp() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -52,13 +66,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       );
       // GoRouter redirect handles navigation
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
+
       String message = 'An error occurred';
       if (e is FirebaseAuthException) {
-        if (e.code == 'weak-password') message = 'The password is too weak.';
-        else if (e.code == 'email-already-in-use') message = 'An account already exists for that email.';
-        else if (e.code == 'invalid-email') message = 'Invalid email format.';
-        else message = e.message ?? 'Authentication failed';
+        if (e.code == 'weak-password') {
+          message = 'The password is too weak.';
+        } else if (e.code == 'email-already-in-use') {
+          message = 'An account already exists for that email.';
+        } else if (e.code == 'invalid-email') {
+          message = 'Invalid email format.';
+        } else {
+          message = e.message ?? 'Authentication failed';
+        }
       } else if (e.toString().contains('email-already-in-use')) {
         message = 'An account already exists for that email.';
       }
@@ -72,7 +94,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     setState(() => _isLoading = true);
     try {
       final user = await ref.read(authServiceProvider).signInWithGoogle();
-      if (user == null && mounted) setState(() => _isLoading = false);
+      if (user == null && mounted) {
+        setState(() => _isLoading = false);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +104,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -144,20 +170,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           type: TextInputType.phone, validator: Validators.validatePhone),
                       const SizedBox(height: 16),
                       _buildLabel("Date Of Birth"),
-                      GestureDetector(
-                        onTap: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: DateTime(2000, 1, 1),
-                            firstDate: DateTime(1940),
-                            lastDate: DateTime.now(),
-                          );
-                          if (picked != null) {
-                            _dobController.text = '${picked.day.toString().padLeft(2, '0')} / ${picked.month.toString().padLeft(2, '0')} / ${picked.year}';
-                          }
-                        },
-                        child: AbsorbPointer(
-                          child: _buildField(_dobController, "DD / MM / YYYY", validator: Validators.validateDob),
+                      _buildField(
+                        _dobController,
+                        "DD/MM/YYYY",
+                        type: TextInputType.datetime,
+                        validator: Validators.validateDob,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          DateInputFormatter(),
+                        ],
+                        suffixIcon: IconButton(
+                          onPressed: _pickDob,
+                          icon: const Icon(Icons.calendar_today_outlined, color: AppColors.accent),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -272,12 +296,18 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Widget _buildField(TextEditingController controller, String hint,
-      {TextInputType type = TextInputType.text, String? Function(String?)? validator}) {
+      {
+      TextInputType type = TextInputType.text,
+      String? Function(String?)? validator,
+      List<TextInputFormatter>? inputFormatters,
+      Widget? suffixIcon,
+    }) {
     return TextFormField(
       controller: controller,
       keyboardType: type,
       validator: validator,
       autovalidateMode: AutovalidateMode.onUserInteraction,
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: AppColors.hintColor),
@@ -288,6 +318,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           borderSide: BorderSide.none,
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        suffixIcon: suffixIcon,
       ),
     );
   }
@@ -337,6 +368,30 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         alignment: Alignment.center,
         child: Image.asset(asset, width: 26),
       ),
+    );
+  }
+}
+
+class DateInputFormatter extends TextInputFormatter {
+  const DateInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final limitedDigits = digits.length > 8 ? digits.substring(0, 8) : digits;
+    final buffer = StringBuffer();
+
+    for (var index = 0; index < limitedDigits.length; index += 1) {
+      buffer.write(limitedDigits[index]);
+      if ((index == 1 || index == 3) && index != limitedDigits.length - 1) {
+        buffer.write('/');
+      }
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

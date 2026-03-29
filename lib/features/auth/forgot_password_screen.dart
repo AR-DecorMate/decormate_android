@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../app/constants.dart';
@@ -47,6 +48,19 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           ),
         );
       }
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
+      var message = e.message ?? 'Unable to send reset email.';
+      if (e.code == 'invalid-email') {
+        message = 'Please enter a valid email address.';
+      } else if (e.code == 'user-not-found') {
+        message = 'No account was found for that email address.';
+      } else if (e.code == 'wrong-provider') {
+        message = 'This account uses Google sign-in. Please use Google to log in.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
