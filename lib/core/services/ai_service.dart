@@ -41,7 +41,7 @@ class AiService {
     debugPrint('[AiService] Models initialized successfully');
   }
 
-  Future<String> sendMessage(String prompt) async {
+  Future<String> sendMessage(String prompt, {int retryCount = 0}) async {
     _initModels();
     if (_textModel == null) {
       debugPrint('[AiService] textModel is null — API key missing');
@@ -57,6 +57,15 @@ class AiService {
     } catch (e, stack) {
       debugPrint('[AiService] ERROR in sendMessage: $e');
       debugPrint('[AiService] Stack: $stack');
+      final errStr = e.toString().toLowerCase();
+      // Retry on 503/overloaded/rate limit (up to 3 times with backoff)
+      if (retryCount < 3 && (errStr.contains('503') || errStr.contains('overloaded') || errStr.contains('rate') || errStr.contains('unavailable'))) {
+        final delay = Duration(seconds: (1 << retryCount)); // 1s, 2s, 4s
+        debugPrint('[AiService] Retrying in ${delay.inSeconds}s (attempt ${retryCount + 1})...');
+        await Future<void>.delayed(delay);
+        _chat = null;
+        return sendMessage(prompt, retryCount: retryCount + 1);
+      }
       _chat = null;
       // Retry with fallback key if not already using it
       if (!_usingFallback && _fallbackKey.isNotEmpty) {
@@ -64,11 +73,11 @@ class AiService {
         _initModels(forceFallback: true);
         return sendMessage(prompt);
       }
-      return 'Error: $e';
+      return 'AI is temporarily busy. Please try again in a moment.';
     }
   }
 
-  Future<String> analyzeImage(Uint8List imageBytes, String prompt) async {
+  Future<String> analyzeImage(Uint8List imageBytes, String prompt, {int retryCount = 0}) async {
     _initModels();
     if (_visionModel == null) return AiPrompts.unavailableMessage;
 
@@ -83,13 +92,19 @@ class AiService {
     } catch (e, stack) {
       debugPrint('[AiService] ERROR in analyzeImage: $e');
       debugPrint('[AiService] Stack: $stack');
-      // Retry with fallback key if not already using it
+      final errStr = e.toString().toLowerCase();
+      if (retryCount < 3 && (errStr.contains('503') || errStr.contains('overloaded') || errStr.contains('rate') || errStr.contains('unavailable'))) {
+        final delay = Duration(seconds: (1 << retryCount));
+        debugPrint('[AiService] Retrying analyzeImage in ${delay.inSeconds}s...');
+        await Future<void>.delayed(delay);
+        return analyzeImage(imageBytes, prompt, retryCount: retryCount + 1);
+      }
       if (!_usingFallback && _fallbackKey.isNotEmpty) {
         debugPrint('[AiService] Retrying analyzeImage with fallback key...');
         _initModels(forceFallback: true);
         return analyzeImage(imageBytes, prompt);
       }
-      return 'Error: $e';
+      return 'AI is temporarily busy. Please try again in a moment.';
     }
   }
 

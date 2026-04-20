@@ -130,59 +130,55 @@ class FirestoreService {
 
   // ── Catalog ─────────────────────────────────────────────────
 
-  // Hosted GLB models from KhronosGroup glTF Sample Assets (GitHub CDN)
-  // These are placeholder 3D models - replace with actual furniture models when available
+  // ── Hosted GLB models (ONLY used where model MATCHES the category) ──
   static const _mChair = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb';
   static const _mLantern = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Lantern/glTF-Binary/Lantern.glb';
-  static const _mDuck = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb';
-  static const _mBox = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/BoxAnimated/glTF-Binary/BoxAnimated.glb';
-  static const _mBottle = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/WaterBottle/glTF-Binary/WaterBottle.glb';
-  static const _mHelmet = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
-  static const _mCarbonFibre = 'https://raw.githubusercontent.com/AliFlux/3DModels/master/models/carbon_fibre/carbon_fibre.glb';
+  static const _mVase = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/GlassVaseFlowers/glTF-Binary/GlassVaseFlowers.glb';
+  static const _mLamp = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/LightsPunctualLamp/glTF-Binary/LightsPunctualLamp.glb';
 
   static const _testItems = [
-    // ── Sofa (chair model - closest match) ──
+    // ── Sofa (chair model = closest seating match) ──
     CatalogItem(id: 'sofa_casual', name: 'Modern Sofa', description: 'A comfortable modern sofa for your living room.', category: 'Sofa', style: 'casual', thumbnailUrl: '', modelUrl: _mChair, isTrending: true),
-    CatalogItem(id: 'sofa_luxury', name: 'Velvet Lounger', description: 'An elegant velvet lounger with premium finish.', category: 'Sofa', style: 'luxury', thumbnailUrl: '', modelUrl: _mHelmet, isTrending: true),
-    // ── Bed (box model - placeholder) ──
-    CatalogItem(id: 'bed_casual', name: 'Platform Bed', description: 'A modern platform bed frame.', category: 'Bed', style: 'casual', thumbnailUrl: '', modelUrl: _mBox, isTrending: true),
-    CatalogItem(id: 'bed_luxury', name: 'King Size Bed', description: 'A luxury king-size bed with tufted headboard.', category: 'Bed', style: 'luxury', thumbnailUrl: '', modelUrl: _mCarbonFibre),
-    // ── Table ──
-    CatalogItem(id: 'table_casual', name: 'Coffee Table', description: 'A wooden coffee table for your living room.', category: 'Table', style: 'casual', thumbnailUrl: '', modelUrl: _mBox),
-    CatalogItem(id: 'table_luxury', name: 'Marble Dining Table', description: 'An elegant marble dining table for six.', category: 'Table', style: 'luxury', thumbnailUrl: '', modelUrl: _mHelmet, isTrending: true),
-    // ── Chair (actual chair model) ──
+    CatalogItem(id: 'sofa_luxury', name: 'Velvet Lounger', description: 'An elegant velvet lounger with premium finish.', category: 'Sofa', style: 'luxury', thumbnailUrl: '', modelUrl: _mChair, isTrending: true),
+    // ── Bed (no matching model yet) ──
+    CatalogItem(id: 'bed_casual', name: 'Platform Bed', description: 'A modern platform bed frame.', category: 'Bed', style: 'casual', thumbnailUrl: '', modelUrl: '', isTrending: true),
+    CatalogItem(id: 'bed_luxury', name: 'King Size Bed', description: 'A luxury king-size bed with tufted headboard.', category: 'Bed', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Table (no matching model yet) ──
+    CatalogItem(id: 'table_casual', name: 'Coffee Table', description: 'A wooden coffee table for your living room.', category: 'Table', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'table_luxury', name: 'Marble Dining Table', description: 'An elegant marble dining table for six.', category: 'Table', style: 'luxury', thumbnailUrl: '', modelUrl: '', isTrending: true),
+    // ── Chair (actual chair model!) ──
     CatalogItem(id: 'chair_casual', name: 'Wooden Chair', description: 'A simple wooden dining chair.', category: 'Chair', style: 'casual', thumbnailUrl: '', modelUrl: _mChair),
     CatalogItem(id: 'chair_luxury', name: 'Accent Chair', description: 'A premium fabric accent chair.', category: 'Chair', style: 'luxury', thumbnailUrl: '', modelUrl: _mChair, isTrending: true),
-    // ── Lamps (lantern model - good match) ──
-    CatalogItem(id: 'lamp_casual', name: 'Desk Lamp', description: 'A modern desk lamp with adjustable arm.', category: 'Lamps', style: 'casual', thumbnailUrl: '', modelUrl: _mLantern),
-    CatalogItem(id: 'lamp_luxury', name: 'Designer Lamp', description: 'A premium designer table lamp.', category: 'Lamps', style: 'luxury', thumbnailUrl: '', modelUrl: _mBottle),
-    // ── Frames ──
-    CatalogItem(id: 'frame_casual', name: 'Photo Frame', description: 'A simple wooden photo frame.', category: 'Frames', style: 'casual', thumbnailUrl: '', modelUrl: _mDuck),
-    CatalogItem(id: 'frame_luxury', name: 'Ornate Frame', description: 'An ornate gold-plated picture frame.', category: 'Frames', style: 'luxury', thumbnailUrl: '', modelUrl: _mHelmet),
-    // ── Fan ──
-    CatalogItem(id: 'fan_casual', name: 'Ceiling Fan', description: 'A standard 3-blade ceiling fan.', category: 'Fan', style: 'casual', thumbnailUrl: '', modelUrl: _mDuck),
-    CatalogItem(id: 'fan_luxury', name: 'Designer Fan', description: 'A premium designer ceiling fan with LED.', category: 'Fan', style: 'luxury', thumbnailUrl: '', modelUrl: _mCarbonFibre),
-    // ── Lights (lantern - good match) ──
+    // ── Lamps (real lamp models) ──
+    CatalogItem(id: 'lamp_casual', name: 'Desk Lamp', description: 'A modern desk lamp with adjustable arm.', category: 'Lamps', style: 'casual', thumbnailUrl: '', modelUrl: _mLamp),
+    CatalogItem(id: 'lamp_luxury', name: 'Designer Lamp', description: 'A premium designer table lamp.', category: 'Lamps', style: 'luxury', thumbnailUrl: '', modelUrl: _mLantern),
+    // ── Frames (no matching model yet) ──
+    CatalogItem(id: 'frame_casual', name: 'Photo Frame', description: 'A simple wooden photo frame.', category: 'Frames', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'frame_luxury', name: 'Ornate Frame', description: 'An ornate gold-plated picture frame.', category: 'Frames', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Fan (no matching model yet) ──
+    CatalogItem(id: 'fan_casual', name: 'Ceiling Fan', description: 'A standard 3-blade ceiling fan.', category: 'Fan', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'fan_luxury', name: 'Designer Fan', description: 'A premium designer ceiling fan with LED.', category: 'Fan', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Lights (lantern + lamp) ──
     CatalogItem(id: 'light_casual', name: 'LED Panel', description: 'A modern LED panel light for ceilings.', category: 'Lights', style: 'casual', thumbnailUrl: '', modelUrl: _mLantern),
-    CatalogItem(id: 'light_luxury', name: 'Pendant Light', description: 'A luxurious pendant light fixture.', category: 'Lights', style: 'luxury', thumbnailUrl: '', modelUrl: _mBottle, isTrending: true),
-    // ── Curtains ──
-    CatalogItem(id: 'curtain_casual', name: 'Cotton Curtains', description: 'Simple cotton curtains for everyday use.', category: 'Curtains', style: 'casual', thumbnailUrl: '', modelUrl: _mBox),
-    CatalogItem(id: 'curtain_luxury', name: 'Silk Drapes', description: 'Premium silk drapes with gold accents.', category: 'Curtains', style: 'luxury', thumbnailUrl: '', modelUrl: _mHelmet),
-    // ── Washbasin ──
-    CatalogItem(id: 'basin_casual', name: 'Ceramic Basin', description: 'A standard ceramic washbasin.', category: 'Washbasin', style: 'casual', thumbnailUrl: '', modelUrl: _mBottle),
-    CatalogItem(id: 'basin_luxury', name: 'Stone Basin', description: 'A premium natural stone washbasin.', category: 'Washbasin', style: 'luxury', thumbnailUrl: '', modelUrl: _mHelmet),
-    // ── Tap ──
-    CatalogItem(id: 'tap_casual', name: 'Chrome Tap', description: 'A standard chrome mixer tap.', category: 'Tap', style: 'casual', thumbnailUrl: '', modelUrl: _mBottle),
-    CatalogItem(id: 'tap_luxury', name: 'Waterfall Tap', description: 'A luxury gold-finish waterfall tap.', category: 'Tap', style: 'luxury', thumbnailUrl: '', modelUrl: _mCarbonFibre),
-    // ── Windows ──
-    CatalogItem(id: 'window_casual', name: 'Sliding Window', description: 'A standard aluminum sliding window.', category: 'Windows', style: 'casual', thumbnailUrl: '', modelUrl: _mBox),
-    CatalogItem(id: 'window_luxury', name: 'Bay Window', description: 'A premium bay window with wooden frame.', category: 'Windows', style: 'luxury', thumbnailUrl: '', modelUrl: _mCarbonFibre),
-    // ── Decor ──
-    CatalogItem(id: 'decor_casual', name: 'Decorative Piece', description: 'A minimalist decorative accent piece.', category: 'Decor', style: 'casual', thumbnailUrl: '', modelUrl: _mDuck, isTrending: true),
-    CatalogItem(id: 'decor_luxury', name: 'Art Sculpture', description: 'An elegant decorative sculpture.', category: 'Decor', style: 'luxury', thumbnailUrl: '', modelUrl: _mHelmet),
-    // ── Chandelier (lantern - closest match) ──
+    CatalogItem(id: 'light_luxury', name: 'Pendant Light', description: 'A luxurious pendant light fixture.', category: 'Lights', style: 'luxury', thumbnailUrl: '', modelUrl: _mLamp, isTrending: true),
+    // ── Curtains (no matching model yet) ──
+    CatalogItem(id: 'curtain_casual', name: 'Cotton Curtains', description: 'Simple cotton curtains for everyday use.', category: 'Curtains', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'curtain_luxury', name: 'Silk Drapes', description: 'Premium silk drapes with gold accents.', category: 'Curtains', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Washbasin (no matching model yet) ──
+    CatalogItem(id: 'basin_casual', name: 'Ceramic Basin', description: 'A standard ceramic washbasin.', category: 'Washbasin', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'basin_luxury', name: 'Stone Basin', description: 'A premium natural stone washbasin.', category: 'Washbasin', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Tap (no matching model yet) ──
+    CatalogItem(id: 'tap_casual', name: 'Chrome Tap', description: 'A standard chrome mixer tap.', category: 'Tap', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'tap_luxury', name: 'Waterfall Tap', description: 'A luxury gold-finish waterfall tap.', category: 'Tap', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Windows (no matching model yet) ──
+    CatalogItem(id: 'window_casual', name: 'Sliding Window', description: 'A standard aluminum sliding window.', category: 'Windows', style: 'casual', thumbnailUrl: '', modelUrl: ''),
+    CatalogItem(id: 'window_luxury', name: 'Bay Window', description: 'A premium bay window with wooden frame.', category: 'Windows', style: 'luxury', thumbnailUrl: '', modelUrl: ''),
+    // ── Decor (actual glass vase with flowers) ──
+    CatalogItem(id: 'decor_casual', name: 'Glass Vase', description: 'A glass vase with fresh flowers.', category: 'Decor', style: 'casual', thumbnailUrl: '', modelUrl: _mVase, isTrending: true),
+    CatalogItem(id: 'decor_luxury', name: 'Crystal Vase', description: 'An elegant crystal vase arrangement.', category: 'Decor', style: 'luxury', thumbnailUrl: '', modelUrl: _mVase),
+    // ── Chandelier (lantern = closest light fixture) ──
     CatalogItem(id: 'chandelier_casual', name: 'Mini Chandelier', description: 'A compact modern chandelier.', category: 'Chandelier', style: 'casual', thumbnailUrl: '', modelUrl: _mLantern),
-    CatalogItem(id: 'chandelier_luxury', name: 'Grand Chandelier', description: 'A grand crystal chandelier for large spaces.', category: 'Chandelier', style: 'luxury', thumbnailUrl: '', modelUrl: _mBottle, isTrending: true),
+    CatalogItem(id: 'chandelier_luxury', name: 'Grand Chandelier', description: 'A grand crystal chandelier for large spaces.', category: 'Chandelier', style: 'luxury', thumbnailUrl: '', modelUrl: _mLamp, isTrending: true),
   ];
 
   Future<List<CatalogItem>> getCatalogItems(String category, {String? style}) async {
@@ -275,6 +271,10 @@ class FirestoreService {
       'image_url': imageUrl,
       'created_at': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> deleteMyDesign(String uid, String designId) {
+    return _db.collection('users').doc(uid).collection('my_designs').doc(designId).delete();
   }
 
   // ── Liked Posts ─────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import '../../app/constants.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/catalog_provider.dart';
@@ -79,39 +80,59 @@ class ItemDetailScreen extends ConsumerWidget {
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    color: AppColors.backgroundBeige,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            CategoryIcons.forCategory(item.category),
-                            size: 80,
-                            color: AppColors.accent,
-                          ),
-                          if (item.modelUrl.isNotEmpty) ...[
-                            const SizedBox(height: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.view_in_ar, size: 16, color: AppColors.accent),
-                                  SizedBox(width: 6),
-                                  Text('3D Model Available', style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600)),
-                                ],
+                  background: item.modelUrl.isNotEmpty
+                      ? Stack(
+                          children: [
+                            ModelViewer(
+                              src: item.modelUrl,
+                              alt: item.name,
+                              ar: false,
+                              autoRotate: true,
+                              cameraControls: true,
+                              disableZoom: true,
+                              backgroundColor: AppColors.backgroundBeige,
+                            ),
+                            Positioned(
+                              bottom: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.view_in_ar, size: 14, color: Colors.white),
+                                    SizedBox(width: 4),
+                                    Text('3D Preview', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.w600)),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
-                        ],
-                      ),
-                    ),
-                  ),
+                        )
+                      : Container(
+                          color: AppColors.backgroundBeige,
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(CategoryIcons.forCategory(item.category), size: 80, color: AppColors.accent),
+                                const SizedBox(height: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text('3D Model Coming Soon', style: TextStyle(fontSize: 12, color: Colors.orange.shade800, fontWeight: FontWeight.w600)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
               ),
               SliverToBoxAdapter(

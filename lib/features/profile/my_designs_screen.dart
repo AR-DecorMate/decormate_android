@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
+import '../../core/providers/auth_provider.dart';
 import '../../core/providers/user_provider.dart';
 
 class MyDesignsScreen extends ConsumerWidget {
@@ -81,6 +82,22 @@ class MyDesignsScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
+                    // Delete button top-right
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: GestureDetector(
+                        onTap: () => _showDeleteDialog(context, ref, design['id'] as String),
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withAlpha(120),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.delete_outline, color: Colors.white, size: 16),
+                        ),
+                      ),
+                    ),
                     Positioned(
                       bottom: 8,
                       left: 8,
@@ -120,6 +137,42 @@ class MyDesignsScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator(color: AppColors.accent)),
         error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, String designId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Design?'),
+        content: const Text('This will permanently delete this design.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final user = ref.read(currentUserProvider);
+                if (user != null) {
+                  await ref.read(firestoreServiceProvider).deleteMyDesign(user.uid, designId);
+                }
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Design deleted'), duration: Duration(seconds: 1)),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
