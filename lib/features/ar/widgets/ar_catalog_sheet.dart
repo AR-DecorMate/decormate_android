@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/constants.dart';
 import '../../../core/models/catalog_item_model.dart';
 import '../../../core/providers/catalog_provider.dart';
+import '../../../core/utils/category_icons.dart';
 
 class ArCatalogSheet extends ConsumerStatefulWidget {
   final String? selectedItemId;
@@ -175,10 +176,20 @@ class _ArCatalogSheetState extends ConsumerState<ArCatalogSheet> {
                                         child: Container(
                                           color: AppColors.backgroundBeige,
                                           width: double.infinity,
-                                          child: Icon(
-                                            hasModel ? Icons.view_in_ar : Icons.chair,
-                                            color: hasModel ? AppColors.accent : Colors.grey.shade400,
-                                            size: 28,
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                CategoryIcons.forCategory(item.category),
+                                                color: hasModel ? AppColors.accent : Colors.grey.shade400,
+                                                size: 24,
+                                              ),
+                                              if (hasModel)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(top: 2),
+                                                  child: Icon(Icons.view_in_ar, size: 10, color: AppColors.primaryPink),
+                                                ),
+                                            ],
                                           ),
                                         ),
                                       ),

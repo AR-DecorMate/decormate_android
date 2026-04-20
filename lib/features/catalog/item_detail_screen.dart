@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/catalog_provider.dart';
 import '../../core/providers/saved_designs_provider.dart';
 import '../../core/providers/user_provider.dart';
+import '../../core/utils/category_icons.dart';
 import '../../shared/widgets/ai_chat_fab.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
@@ -31,7 +31,7 @@ class ItemDetailScreen extends ConsumerWidget {
           return CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 350,
+                expandedHeight: 300,
                 pinned: true,
                 backgroundColor: Colors.white,
                 leading: GestureDetector(
@@ -47,10 +47,21 @@ class ItemDetailScreen extends ConsumerWidget {
                 ),
                 actions: [
                   GestureDetector(
-                    onTap: () {
+                    onTap: () async {
                       final user = ref.read(currentUserProvider);
                       if (user != null) {
-                        ref.read(firestoreServiceProvider).toggleSaveDesign(user.uid, item);
+                        await ref.read(firestoreServiceProvider).toggleSaveDesign(user.uid, item);
+                        // Refresh saved state
+                        ref.invalidate(isItemSavedProvider(itemId));
+                        ref.invalidate(savedDesignsProvider);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isSaved ? 'Removed from saved' : 'Saved!'),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        }
                       }
                     },
                     child: Container(
@@ -68,16 +79,37 @@ class ItemDetailScreen extends ConsumerWidget {
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
-                  background: CachedNetworkImage(
-                    imageUrl: item.thumbnailUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
-                      color: AppColors.backgroundBeige,
-                      child: const Center(child: CircularProgressIndicator(color: AppColors.accent)),
-                    ),
-                    errorWidget: (_, __, ___) => Container(
-                      color: AppColors.backgroundBeige,
-                      child: const Icon(Icons.chair, size: 64, color: AppColors.accent),
+                  background: Container(
+                    color: AppColors.backgroundBeige,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            CategoryIcons.forCategory(item.category),
+                            size: 80,
+                            color: AppColors.accent,
+                          ),
+                          if (item.modelUrl.isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.view_in_ar, size: 16, color: AppColors.accent),
+                                  SizedBox(width: 6),
+                                  Text('3D Model Available', style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -105,7 +137,7 @@ class ItemDetailScreen extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              item.style == 'luxury' ? '✨ Luxury' : '🪑 Casual',
+                              item.style == 'luxury' ? 'Luxury' : 'Casual',
                               style: TextStyle(
                                 color: item.style == 'luxury' ? Colors.amber.shade800 : AppColors.darkText,
                                 fontSize: 12,
@@ -159,10 +191,20 @@ class ItemDetailScreen extends ConsumerWidget {
                         width: double.infinity,
                         height: 54,
                         child: OutlinedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
                             final user = ref.read(currentUserProvider);
                             if (user != null) {
-                              ref.read(firestoreServiceProvider).toggleSaveDesign(user.uid, item);
+                              await ref.read(firestoreServiceProvider).toggleSaveDesign(user.uid, item);
+                              ref.invalidate(isItemSavedProvider(itemId));
+                              ref.invalidate(savedDesignsProvider);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(isSaved ? 'Removed from saved' : 'Saved!'),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              }
                             }
                           },
                           icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border),
@@ -195,7 +237,7 @@ class ItemDetailScreen extends ConsumerWidget {
         Icon(icon, color: AppColors.accent, size: 20),
         const SizedBox(width: 8),
         Text("$label: ", style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.darkText)),
-        Text(value, style: const TextStyle(color: Colors.grey)),
+        Expanded(child: Text(value, style: const TextStyle(color: Colors.grey))),
       ],
     );
   }

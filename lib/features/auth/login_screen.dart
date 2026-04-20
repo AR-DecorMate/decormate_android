@@ -64,25 +64,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  Future<void> _signInWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      final user = await ref.read(authServiceProvider).signInWithGoogle();
-      if (user == null && mounted) {
-        setState(() => _isLoading = false);
-      }
-      // GoRouter redirect handles navigation
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In Failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -261,37 +242,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 60),
-
-                      const Center(
-                        child: Text(
-                          "or log in with",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w300,
-                            fontSize: 13,
-                            color: AppColors.darkText,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-
-                      // GOOGLE BUTTON
-                      Center(
-                        child: GestureDetector(
-                          onTap: _isLoading ? null : _signInWithGoogle,
-                          child: Container(
-                            width: 55,
-                            height: 55,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.subtleText, width: 1.3),
-                            ),
-                            alignment: Alignment.center,
-                            child: Image.asset("assets/images/google.png", height: 28, width: 28),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 25),
+                      const SizedBox(height: 40),
 
                       // SIGN UP LINK
                       Center(

@@ -76,14 +76,13 @@ class _PostCard extends ConsumerWidget {
     final currentUser = ref.watch(currentUserProvider);
     final currentUserProfile = ref.watch(userProfileProvider).valueOrNull;
     final isLiked = currentUser != null && post.isLikedBy(currentUser.uid);
-    final displayUserName = currentUser != null &&
-            currentUser.uid == post.userId &&
+    final isOwner = currentUser != null && currentUser.uid == post.userId;
+    final displayUserName = isOwner &&
             currentUserProfile != null &&
             currentUserProfile.name.isNotEmpty
         ? currentUserProfile.name
         : post.userName;
-    final displayUserAvatarUrl = currentUser != null &&
-            currentUser.uid == post.userId &&
+    final displayUserAvatarUrl = isOwner &&
             (currentUserProfile?.avatarUrl?.isNotEmpty ?? false)
         ? currentUserProfile!.avatarUrl
         : post.userAvatarUrl;
@@ -100,7 +99,7 @@ class _PostCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // USER INFO
+          // USER INFO + OPTIONS
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
@@ -119,10 +118,33 @@ class _PostCard extends ConsumerWidget {
                       : null,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  displayUserName,
-                  style: const TextStyle(fontSize: 15, color: AppColors.darkText, fontWeight: FontWeight.w600),
+                Expanded(
+                  child: Text(
+                    displayUserName,
+                    style: const TextStyle(fontSize: 15, color: AppColors.darkText, fontWeight: FontWeight.w600),
+                  ),
                 ),
+                if (isOwner)
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert, color: Colors.grey),
+                    onSelected: (value) {
+                      if (value == 'delete') {
+                        _showDeleteDialog(context, ref);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            SizedBox(width: 8),
+                            Text('Delete Post', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -151,13 +173,14 @@ class _PostCard extends ConsumerWidget {
           const SizedBox(height: 10),
 
           // CAPTION
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Text(
-              post.caption,
-              style: const TextStyle(fontSize: 14, color: AppColors.darkText),
+          if (post.caption.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Text(
+                post.caption,
+                style: const TextStyle(fontSize: 14, color: AppColors.darkText),
+              ),
             ),
-          ),
 
           const SizedBox(height: 12),
 
@@ -197,6 +220,39 @@ class _PostCard extends ConsumerWidget {
     );
   }
 
+  void _showDeleteDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Delete Post?"),
+        content: const Text("This will permanently delete this post and all its comments."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ref.read(firestoreServiceProvider).deletePost(post.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Post deleted'), duration: Duration(seconds: 1)),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error deleting post: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _openCommentsSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
@@ -221,6 +277,7 @@ class _CommentsSheet extends ConsumerStatefulWidget {
 
 class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
   final _controller = TextEditingController();
+  bool _isSending = false;
 
   @override
   void dispose() {
@@ -230,11 +287,16 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
 
   Future<void> _addComment() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isSending) return;
+
+    setState(() => _isSending = true);
 
     final currentUser = ref.read(currentUserProvider);
     final userProfile = ref.read(userProfileProvider).valueOrNull;
-    if (currentUser == null) return;
+    if (currentUser == null) {
+      setState(() => _isSending = false);
+      return;
+    }
 
     final commentUserName = userProfile?.name.isNotEmpty == true
         ? userProfile!.name
@@ -243,18 +305,28 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
         ? userProfile!.avatarUrl
         : currentUser.photoURL;
 
-    await ref.read(firestoreServiceProvider).addComment(
-      widget.postId,
-      CommentModel(
-        id: '',
-        userId: currentUser.uid,
-        userName: commentUserName,
-        userAvatarUrl: commentUserAvatarUrl,
-        text: text,
-        createdAt: DateTime.now(),
-      ),
-    );
-    _controller.clear();
+    try {
+      await ref.read(firestoreServiceProvider).addComment(
+        widget.postId,
+        CommentModel(
+          id: '',
+          userId: currentUser.uid,
+          userName: commentUserName,
+          userAvatarUrl: commentUserAvatarUrl,
+          text: text,
+          createdAt: DateTime.now(),
+        ),
+      );
+      _controller.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
   @override
@@ -348,10 +420,16 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: AppColors.accent),
-                    onPressed: _addComment,
-                  ),
+                  _isSending
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.send, color: AppColors.accent),
+                          onPressed: _addComment,
+                        ),
                 ],
               ),
             ),

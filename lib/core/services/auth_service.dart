@@ -1,8 +1,4 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import 'firestore_service.dart';
@@ -11,15 +7,6 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreService _firestoreService = FirestoreService();
-
-  // Lazy-init to avoid crash on web when no OAuth clientId is set
-  GoogleSignIn? _googleSignIn;
-  String get _googleOAuthClientId => dotenv.env['GOOGLE_OAUTH_CLIENT_ID']?.trim() ?? '';
-
-  GoogleSignIn get _gsi => _googleSignIn ??= GoogleSignIn(
-    clientId: kIsWeb && _googleOAuthClientId.isNotEmpty ? _googleOAuthClientId : null,
-    serverClientId: !kIsWeb && _googleOAuthClientId.isNotEmpty ? _googleOAuthClientId : null,
-  );
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -71,29 +58,8 @@ class AuthService {
           name: resolvedName,
           avatarUrl: resolvedAvatarUrl.isNotEmpty ? resolvedAvatarUrl : null,
         );
-      } catch (_) {
-        // Do not block auth if post profile sync is rejected by Firestore rules.
-      }
+      } catch (_) {}
     }
-  }
-
-  String _googleSignInErrorMessage(Object error) {
-    if (error is PlatformException) {
-      if (error.code == 'sign_in_canceled') return 'Google sign-in was cancelled.';
-      if (error.code == 'network_error') return 'Google sign-in failed because the network is unavailable.';
-      if (error.code == 'sign_in_failed' || error.code == '10') {
-        return 'Google sign-in is not configured correctly for Android. Update the Firebase OAuth setup and download a fresh google-services.json.';
-      }
-      if (error.message != null && error.message!.trim().isNotEmpty) {
-        return error.message!.trim();
-      }
-    }
-
-    if (error is FirebaseAuthException && error.message != null && error.message!.trim().isNotEmpty) {
-      return error.message!.trim();
-    }
-
-    return 'Google sign-in failed. Please try again.';
   }
 
   Future<User?> signInWithEmail(String email, String password) async {
@@ -140,57 +106,103 @@ class AuthService {
     return user;
   }
 
-  Future<User?> signInWithGoogle() async {
-    try {
-      final googleUser = await _gsi.signIn();
-      if (googleUser == null) return null;
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await _auth.signInWithCredential(credential);
-      final user = userCredential.user;
-
-      if (user != null) {
-        await _upsertUserFromAuth(
-          user,
-          fallbackName: googleUser.displayName,
-          fallbackEmail: googleUser.email,
-        );
-      }
-      return user;
-    } catch (error) {
-      throw Exception(_googleSignInErrorMessage(error));
-    }
-  }
-
   Future<void> sendPasswordReset(String email) async {
     final normalizedEmail = _normalizeEmail(email);
-    final methods = await _auth.fetchSignInMethodsForEmail(normalizedEmail);
-
-    if (methods.contains(GoogleAuthProvider.PROVIDER_ID) &&
-        !methods.contains(EmailAuthProvider.EMAIL_PASSWORD_SIGN_IN_METHOD)) {
-      throw FirebaseAuthException(
-        code: 'wrong-provider',
-        message: 'This account uses Google sign-in. Please use Google to log in.',
-      );
-    }
-
     await _auth.sendPasswordResetEmail(email: normalizedEmail);
   }
 
   Future<void> signOut() async {
-    try { await _gsi.signOut(); } catch (_) {}
     await _auth.signOut();
   }
 
   Future<void> deleteAccount() async {
     final user = _auth.currentUser;
     if (user != null) {
-      await _firestore.collection('users').doc(user.uid).delete();
+      final uid = user.uid;
+
+      // Delete all user posts
+      final posts = await _firestore
+          .collection('posts')
+          .where('user_id', isEqualTo: uid)
+          .get();
+
+      WriteBatch batch = _firestore.batch();
+      int opCount = 0;
+
+      for (final post in posts.docs) {
+        // Delete post comments subcollection
+        final comments = await post.reference.collection('comments').get();
+        for (final comment in comments.docs) {
+          batch.delete(comment.reference);
+          opCount++;
+          if (opCount >= 450) {
+            await batch.commit();
+            batch = _firestore.batch();
+            opCount = 0;
+          }
+        }
+        batch.delete(post.reference);
+        opCount++;
+        if (opCount >= 450) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
+        }
+      }
+
+      // Delete saved_designs subcollection
+      final saved = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('saved_designs')
+          .get();
+      for (final doc in saved.docs) {
+        batch.delete(doc.reference);
+        opCount++;
+        if (opCount >= 450) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
+        }
+      }
+
+      // Delete my_designs subcollection
+      final myDesigns = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('my_designs')
+          .get();
+      for (final doc in myDesigns.docs) {
+        batch.delete(doc.reference);
+        opCount++;
+        if (opCount >= 450) {
+          await batch.commit();
+          batch = _firestore.batch();
+          opCount = 0;
+        }
+      }
+
+      // Delete user document
+      batch.delete(_firestore.collection('users').doc(uid));
+      opCount++;
+
+      if (opCount > 0) {
+        await batch.commit();
+      }
+
+      // Remove user's likes from other posts
+      final likedPosts = await _firestore
+          .collection('posts')
+          .where('liked_by', arrayContains: uid)
+          .get();
+      for (final post in likedPosts.docs) {
+        await post.reference.update({
+          'liked_by': FieldValue.arrayRemove([uid]),
+          'likes_count': FieldValue.increment(-1),
+        });
+      }
+
+      // Finally delete the auth account
       await user.delete();
     }
   }

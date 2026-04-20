@@ -16,6 +16,7 @@ import '../../core/services/ar_placement_support_service.dart';
 import '../../core/services/ai_service.dart';
 import '../../core/services/storage_service.dart';
 import '../../core/utils/ai_prompts.dart';
+import '../../core/utils/category_icons.dart';
 import 'widgets/ar_catalog_sheet.dart';
 
 class ArSpaceScreen extends ConsumerStatefulWidget {
@@ -185,12 +186,7 @@ class _ArSpaceScreenState extends ConsumerState<ArSpaceScreen> {
     setState(() => _aiLoading = true);
     try {
       var tip = await aiService.sendMessage(AiPrompts.contextualTip(itemName));
-      // Strip markdown formatting
-      tip = tip
-          .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
-          .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
-          .replaceAll(RegExp(r'#{1,6}\s'), '')
-          .replaceAll(RegExp(r'`(.+?)`'), r'$1');
+      tip = AiPrompts.cleanResponse(tip);
       if (mounted) {
         setState(() { _aiTip = tip; _aiLoading = false; });
       }
@@ -543,6 +539,7 @@ class _BottomCatalogState extends ConsumerState<_BottomCatalog> {
     'Lights', 'Curtains', 'Washbasin', 'Tap', 'Windows', 'Decor', 'Chandelier',
   ];
 
+
   static const _styles = ['All', 'Casual', 'Luxury'];
 
   String get _providerKey {
@@ -678,10 +675,20 @@ class _BottomCatalogState extends ConsumerState<_BottomCatalog> {
                                     child: Container(
                                       color: AppColors.backgroundBeige,
                                       width: double.infinity,
-                                      child: Icon(
-                                        hasModel ? Icons.view_in_ar : Icons.chair,
-                                        color: hasModel ? AppColors.accent : Colors.grey.shade400,
-                                        size: 24,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            CategoryIcons.forCategory(item.category),
+                                            color: hasModel ? AppColors.accent : Colors.grey.shade400,
+                                            size: 28,
+                                          ),
+                                          if (hasModel)
+                                            const Padding(
+                                              padding: EdgeInsets.only(top: 2),
+                                              child: Icon(Icons.view_in_ar, size: 12, color: AppColors.primaryPink),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ),

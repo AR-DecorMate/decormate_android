@@ -90,26 +90,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     }
   }
 
-  Future<void> _signUpWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      final user = await ref.read(authServiceProvider).signInWithGoogle();
-      if (user == null && mounted) {
-        setState(() => _isLoading = false);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In Failed: $e')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -238,20 +218,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
-                      const Center(
-                        child: Text(
-                          "or sign up with",
-                          style: TextStyle(fontWeight: FontWeight.w300, fontSize: 13, color: AppColors.darkText),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _socialButton("assets/images/google.png", _signUpWithGoogle),
-                        ],
-                      ),
                       const SizedBox(height: 25),
                       Center(
                         child: GestureDetector(
@@ -355,21 +321,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     );
   }
 
-  Widget _socialButton(String asset, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: _isLoading ? null : onTap,
-      child: Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.subtleText, width: 1.3),
-        ),
-        alignment: Alignment.center,
-        child: Image.asset(asset, width: 26),
-      ),
-    );
-  }
 }
 
 class DateInputFormatter extends TextInputFormatter {

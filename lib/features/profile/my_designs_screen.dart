@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/user_provider.dart';
@@ -31,7 +32,10 @@ class MyDesignsScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.design_services, size: 64, color: Colors.grey),
                   SizedBox(height: 16),
-                  Text("No designs shared yet", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  Text("No designs yet", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  SizedBox(height: 8),
+                  Text("Take AR screenshots to save designs here",
+                      style: TextStyle(fontSize: 13, color: Colors.grey)),
                 ],
               ),
             );
@@ -40,7 +44,7 @@ class MyDesignsScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              childAspectRatio: 0.85,
+              childAspectRatio: 0.75,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
@@ -77,16 +81,35 @@ class MyDesignsScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: Align(
-                        alignment: Alignment.bottomLeft,
-                        child: Text(
-                          'AR Design',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.white, fontSize: 13),
-                        ),
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      right: 8,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'AR Design',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: Colors.white, fontSize: 13),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              if (imageUrl.isNotEmpty) {
+                                context.push('/create-post?imageUrl=${Uri.encodeComponent(imageUrl)}');
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withAlpha(200),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.send, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

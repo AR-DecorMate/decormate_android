@@ -56,8 +56,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         message = 'Please enter a valid email address.';
       } else if (e.code == 'user-not-found') {
         message = 'No account was found for that email address.';
-      } else if (e.code == 'wrong-provider') {
-        message = 'This account uses Google sign-in. Please use Google to log in.';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));

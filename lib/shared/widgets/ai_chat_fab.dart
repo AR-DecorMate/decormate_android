@@ -98,7 +98,7 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
     super.initState();
     final item = widget.contextItemName;
     final greeting = item != null
-        ? "Hi! I see you're looking at **$item**. Ask me about placement ideas, styling tips, or anything else!"
+        ? "Hi! I see you're looking at $item. Ask me about placement ideas, styling tips, or anything else!"
         : "Hi! I'm your AI Design Assistant. Ask me about interior design, color palettes, furniture placement, or any design ideas!";
     _messages.add(_ChatMessage(text: greeting, isUser: false));
   }
@@ -124,11 +124,7 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
 
     try {
       var response = await _aiService.sendMessage(text);
-      response = response
-          .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
-          .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
-          .replaceAll(RegExp(r'^#+\s', multiLine: true), '')
-          .replaceAll(RegExp(r'`([^`]+)`'), r'$1');
+      response = AiPrompts.cleanResponse(response);
       if (mounted) {
         setState(() {
           _messages.add(_ChatMessage(text: response, isUser: false));
@@ -162,11 +158,7 @@ class _ChatPanelState extends ConsumerState<_ChatPanel> {
       _scrollToBottom();
 
       var response = await _aiService.analyzeImage(bytes, AiPrompts.roomAnalysisPrompt);
-      response = response
-          .replaceAll(RegExp(r'\*\*(.+?)\*\*'), r'$1')
-          .replaceAll(RegExp(r'\*(.+?)\*'), r'$1')
-          .replaceAll(RegExp(r'^#+\s', multiLine: true), '')
-          .replaceAll(RegExp(r'`([^`]+)`'), r'$1');
+      response = AiPrompts.cleanResponse(response);
       if (mounted) {
         setState(() {
           _messages.add(_ChatMessage(text: response, isUser: false));

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/catalog_provider.dart';
+import '../../core/utils/category_icons.dart';
 
 class CategoryScreen extends ConsumerWidget {
   final String categoryId;
@@ -56,6 +56,7 @@ class CategoryScreen extends ConsumerWidget {
             itemCount: items.length,
             itemBuilder: (context, index) {
               final item = items[index];
+              final hasModel = item.modelUrl.isNotEmpty;
               return GestureDetector(
                 onTap: () => context.push('/item/${item.id}'),
                 child: Container(
@@ -76,19 +77,36 @@ class CategoryScreen extends ConsumerWidget {
                       Expanded(
                         child: ClipRRect(
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                          child: CachedNetworkImage(
-                            imageUrl: item.thumbnailUrl,
-                            fit: BoxFit.cover,
+                          child: Container(
+                            color: AppColors.backgroundBeige,
                             width: double.infinity,
-                            placeholder: (_, __) => Container(
-                              color: AppColors.backgroundBeige,
-                              child: const Center(
-                                child: CircularProgressIndicator(color: AppColors.accent),
-                              ),
-                            ),
-                            errorWidget: (_, __, ___) => Container(
-                              color: AppColors.backgroundBeige,
-                              child: const Icon(Icons.chair, size: 48, color: AppColors.accent),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  CategoryIcons.forCategory(item.category),
+                                  size: 48,
+                                  color: hasModel ? AppColors.accent : Colors.grey,
+                                ),
+                                if (hasModel) ...[
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accent.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.view_in_ar, size: 12, color: AppColors.accent),
+                                        SizedBox(width: 4),
+                                        Text('3D', style: TextStyle(fontSize: 10, color: AppColors.accent, fontWeight: FontWeight.bold)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
@@ -108,11 +126,14 @@ class CategoryScreen extends ConsumerWidget {
                                 color: AppColors.darkText,
                               ),
                             ),
-                            if (item.dimensions.isNotEmpty)
-                              Text(
-                                item.dimensions.entries.map((e) => '${e.key}: ${e.value}').join(', '),
-                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            const SizedBox(height: 2),
+                            Text(
+                              item.style == 'luxury' ? 'Luxury' : 'Casual',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: item.style == 'luxury' ? Colors.amber.shade700 : Colors.grey,
                               ),
+                            ),
                           ],
                         ),
                       ),

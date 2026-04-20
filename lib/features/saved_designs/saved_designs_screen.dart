@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../app/constants.dart';
 import '../../core/providers/auth_provider.dart';
 import '../../core/providers/user_provider.dart';
 import '../../core/providers/saved_designs_provider.dart';
+import '../../core/utils/category_icons.dart';
 
 class SavedDesignsScreen extends ConsumerWidget {
   const SavedDesignsScreen({super.key});
@@ -67,7 +67,7 @@ class SavedDesignsScreen extends ConsumerWidget {
                         return GestureDetector(
                           onTap: () => context.push('/item/${item.itemId}'),
                           onLongPress: () {
-                            _showDeleteDialog(context, ref, item.itemId);
+                            _showDeleteDialog(context, ref, item.itemId, item.name);
                           },
                           child: Container(
                             decoration: BoxDecoration(
@@ -87,27 +87,17 @@ class SavedDesignsScreen extends ConsumerWidget {
                                 Expanded(
                                   child: ClipRRect(
                                     borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                    child: item.thumbnailUrl.isNotEmpty
-                                        ? CachedNetworkImage(
-                                            imageUrl: item.thumbnailUrl,
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            placeholder: (_, __) => Container(
-                                              color: AppColors.backgroundBeige,
-                                              child: const Center(
-                                                  child: CircularProgressIndicator(color: AppColors.accent)),
-                                            ),
-                                            errorWidget: (_, __, ___) => Container(
-                                              color: AppColors.backgroundBeige,
-                                              child: const Icon(Icons.image, color: AppColors.accent, size: 40),
-                                            ),
-                                          )
-                                        : Container(
-                                            color: AppColors.backgroundBeige,
-                                            child: const Center(
-                                              child: Icon(Icons.image, color: AppColors.accent, size: 40),
-                                            ),
-                                          ),
+                                    child: Container(
+                                      color: AppColors.backgroundBeige,
+                                      width: double.infinity,
+                                      child: Center(
+                                        child: Icon(
+                                          CategoryIcons.forCategory(item.category),
+                                          size: 48,
+                                          color: AppColors.accent,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 Padding(
@@ -126,26 +116,16 @@ class SavedDesignsScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.primaryPink.withValues(alpha: 0.2),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                item.category,
-                                                style: const TextStyle(fontSize: 11, color: AppColors.accent),
-                                              ),
-                                            ),
-                                          ),
-                                          GestureDetector(
-                                            onTap: () => context.push('/create-post?imageUrl=${Uri.encodeComponent(item.thumbnailUrl)}'),
-                                            child: const Icon(Icons.share, size: 18, color: AppColors.accent),
-                                          ),
-                                        ],
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primaryPink.withValues(alpha: 0.2),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          item.category,
+                                          style: const TextStyle(fontSize: 11, color: AppColors.accent),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -168,23 +148,31 @@ class SavedDesignsScreen extends ConsumerWidget {
     );
   }
 
-  void _showDeleteDialog(BuildContext context, WidgetRef ref, String itemId) {
+  void _showDeleteDialog(BuildContext context, WidgetRef ref, String itemId, String name) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Remove from Saved?'),
+        content: Text('Remove "$name" from your saved designs?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
             onPressed: () async {
+              Navigator.pop(ctx);
               final user = ref.read(currentUserProvider);
               if (user != null) {
                 final item = await ref.read(firestoreServiceProvider).getCatalogItem(itemId);
                 if (item != null) {
                   await ref.read(firestoreServiceProvider).toggleSaveDesign(user.uid, item);
+                  ref.invalidate(savedDesignsProvider);
+                  ref.invalidate(isItemSavedProvider(itemId));
                 }
               }
-              if (ctx.mounted) Navigator.pop(ctx);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Removed from saved'), duration: Duration(seconds: 1)),
+                );
+              }
             },
             child: const Text('Remove', style: TextStyle(color: Colors.red)),
           ),
