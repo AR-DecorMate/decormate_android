@@ -240,8 +240,11 @@ class _PostCard extends ConsumerWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
+                  final msg = e.toString().contains('permission')
+                      ? 'Permission denied. Deploy updated firestore.rules to Firebase console.'
+                      : 'Error deleting post: $e';
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error deleting post: $e')),
+                    SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),
                   );
                 }
               }

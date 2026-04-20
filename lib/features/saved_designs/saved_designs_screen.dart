@@ -159,19 +159,24 @@ class SavedDesignsScreen extends ConsumerWidget {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final user = ref.read(currentUserProvider);
-              if (user != null) {
-                final item = await ref.read(firestoreServiceProvider).getCatalogItem(itemId);
-                if (item != null) {
-                  await ref.read(firestoreServiceProvider).toggleSaveDesign(user.uid, item);
+              try {
+                final user = ref.read(currentUserProvider);
+                if (user != null) {
+                  await ref.read(firestoreServiceProvider).removeSavedDesign(user.uid, itemId);
                   ref.invalidate(savedDesignsProvider);
                   ref.invalidate(isItemSavedProvider(itemId));
                 }
-              }
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Removed from saved'), duration: Duration(seconds: 1)),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Removed from saved'), duration: Duration(seconds: 1)),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
               }
             },
             child: const Text('Remove', style: TextStyle(color: Colors.red)),
